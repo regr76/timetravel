@@ -1,32 +1,3 @@
-# Rainbow - Backend Take-Home Assignment
-
-Please create a private fork of this repo and complete the objectives.
-Once you are finished, send us an email with a link to your private repo.
-
-
-## To Create A Private Fork
-
-1. Clone the repository to your local machine
-```bash
-git clone git@github.com:regr76/timetravel.git
-cd timetravel
-```
-
-2. Create a new **private** repository on your GitHub account
-- https://github.com/new
-
-3. Add your new private repo as a remote:
-```bash
-git remote rename origin upstream
-git remote add origin https://github.com/YOUR_USERNAME/NEW_PRIVATE_REPO.git
-```
-
-4. Push the code to your new private repo:
-```bash
-git push -u origin master
-```
-
-
 ## To Run The Server
 
 1. Compile and run the Go application:
