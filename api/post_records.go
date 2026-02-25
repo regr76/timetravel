@@ -35,7 +35,8 @@ func (a *API) PostRecords(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// first retrieve the record
-	record, err := a.records.GetRecord(
+	var record entity.Record
+	_, err = a.records.GetRecord(
 		ctx,
 		int(idNumber),
 	)

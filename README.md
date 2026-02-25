@@ -3,7 +3,9 @@
 1. Compile and run the Go application:
 ```bash
 cd timetravel
-go run .
+make all
+tt
+make clean
 ```
 
 2. Test the server using the healthcheck endpoint:
