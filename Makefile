@@ -46,7 +46,7 @@ test:
 	go test -count=1 -race -v ./...
 
 test-coverage:
-	#lsof -i tcp:8083 | awk 'NR!=1 {print $2}' | xargs kill
+	#lsof -i tcp:8000 | awk 'NR!=1 {print $2}' | xargs kill
 	go test -count=1 -race -cover -coverprofile=coverage.out -coverpkg=./... -v ./... | grep '% of statements\|FAIL:' | grep 'ok\|FAIL:' | sed 's_github.com/regr76/__' | sed 's/ok\ \ \t/ /' | sed 's/\t[0-9]*.[0-9]*s\tcoverage:/ /' | sed 's/\ of\ statements/ /' > ./coverage/unit-test-coverage.txt
 	go tool cover -func coverage.out | grep "total:" | sed 's/\t//g' |  sed 's/(statements)/ /' >> ./coverage/unit-test-coverage.txt
 	# go tool cover -html="coverage.out"
