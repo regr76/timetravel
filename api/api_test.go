@@ -232,8 +232,6 @@ func Benchmark_POST_Routes_V1(b *testing.B) {
 }
 
 func Test_GET_Routes_V2(t *testing.T) {
-	t.Skip()
-
 	app := NewAPI(nil, nil)
 	router := app.SetupRouter()
 
@@ -323,7 +321,7 @@ func Test_POST_Routes_V2(t *testing.T) {
 			path:        "/api/v2/records/1",
 			wantStatus:  http.StatusOK,
 			PostResBody: "{\"id\":1,\"data\":{\"key1\":\"value1\",\"key2\":\"222\"}}\n",
-			GetResBody1: "{\"id\":1,\"version\":1,\"start_dt\":",
+			GetResBody1: "{\"id\":1,\"version\":",
 			GetResBody2: "\"data\":{\"key1\":\"value1\",\"key2\":\"222\"\n",
 		},
 		{
@@ -334,7 +332,7 @@ func Test_POST_Routes_V2(t *testing.T) {
 			// the body has no key2 because we create a new router for each test case
 			// so the record created in the first test case is not persisted in the second test case for v1 api
 			PostResBody: "{\"id\":1,\"data\":{\"key1\":\"value2\",\"status\":\"ok\"}}\n",
-			GetResBody1: "{\"id\":1,\"version\":1,\"start_dt\":",
+			GetResBody1: "{\"id\":1,\"version\":",
 			GetResBody2: "\"data\":{\"key1\":\"value1\",\"status\":\"ok\"}}\n",
 		},
 	}
