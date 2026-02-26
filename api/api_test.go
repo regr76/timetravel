@@ -15,35 +15,30 @@ func Test_GET_Routes_V1(t *testing.T) {
 
 	tests := []struct {
 		description string
-		method      string
 		path        string
 		wantStatus  int
 		wantBody    string
 	}{
 		{
 			description: "Health check",
-			method:      "GET",
 			path:        "/api/v1/health",
 			wantStatus:  http.StatusOK,
 			wantBody:    "{\"ok\":true}\n",
 		},
 		{
 			description: "Get non-existent record",
-			method:      "GET",
 			path:        "/api/v1/records/15",
 			wantStatus:  http.StatusBadRequest,
 			wantBody:    "{\"error\":\"record of id 15 does not exist\"}\n",
 		},
 		{
 			description: "Get record with negative id",
-			method:      "GET",
 			path:        "/api/v1/records/-1",
 			wantStatus:  http.StatusBadRequest,
 			wantBody:    "{\"error\":\"invalid id; id must be a positive number\"}\n",
 		},
 		{
 			description: "Invalid id (non-numeric)",
-			method:      "GET",
 			path:        "/api/v1/records/abc",
 			wantStatus:  http.StatusBadRequest,
 			wantBody:    "{\"error\":\"invalid id; id must be a positive number\"}\n",
@@ -52,7 +47,7 @@ func Test_GET_Routes_V1(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.description, func(t *testing.T) {
-			req := httptest.NewRequest(tc.method, tc.path, nil)
+			req := httptest.NewRequest("GET", tc.path, nil)
 			rr := httptest.NewRecorder()
 			router.ServeHTTP(rr, req)
 
@@ -65,7 +60,6 @@ func Test_GET_Routes_V1(t *testing.T) {
 func Test_POST_Routes_V1(t *testing.T) {
 	tests := []struct {
 		description string
-		method      string
 		body        string // needed for POST requests only; can be empty for GET requests
 		path        string
 		wantStatus  int
@@ -73,7 +67,6 @@ func Test_POST_Routes_V1(t *testing.T) {
 	}{
 		{
 			description: "Post new record",
-			method:      "POST",
 			body:        "{\"key1\":\"value1\",\"key2\":\"222\"}",
 			path:        "/api/v1/records/1",
 			wantStatus:  http.StatusOK,
@@ -81,7 +74,6 @@ func Test_POST_Routes_V1(t *testing.T) {
 		},
 		{
 			description: "Update existing record",
-			method:      "POST",
 			body:        "{\"key1\":\"value2\",\"status\":\"ok\"}",
 			path:        "/api/v1/records/1",
 			wantStatus:  http.StatusOK,
@@ -99,7 +91,8 @@ func Test_POST_Routes_V1(t *testing.T) {
 			jsonBody := []byte(tc.body)
 			body := bytes.NewBuffer(jsonBody)
 
-			reqPost := httptest.NewRequest(tc.method, tc.path, body)
+			reqPost := httptest.NewRequest("POST", tc.path, body)
+			reqPost.Header.Set("Content-Type", "application/json")
 			rrPost := httptest.NewRecorder()
 			router.ServeHTTP(rrPost, reqPost)
 
@@ -107,6 +100,7 @@ func Test_POST_Routes_V1(t *testing.T) {
 			require.Equal(t, tc.wantBody, rrPost.Body.String())
 
 			// every POST request is followed by a GET request to ensure that the record was actually created
+			// and returns same exact body as the POST request
 			reqGet := httptest.NewRequest("GET", tc.path, nil)
 			rrGet := httptest.NewRecorder()
 			router.ServeHTTP(rrGet, reqGet)
@@ -123,7 +117,6 @@ func Test_Updates_V1(t *testing.T) {
 
 	tests := []struct {
 		description string
-		method      string
 		body        string
 		path        string
 		wantStatus  int
@@ -131,7 +124,6 @@ func Test_Updates_V1(t *testing.T) {
 	}{
 		{
 			description: "Post new record",
-			method:      "POST",
 			body:        "{\"key1\":\"value1\",\"key2\":\"222\"}",
 			path:        "/api/v1/records/1",
 			wantStatus:  http.StatusOK,
@@ -139,7 +131,6 @@ func Test_Updates_V1(t *testing.T) {
 		},
 		{
 			description: "Update existing record",
-			method:      "POST",
 			body:        "{\"key1\":\"value2\",\"status\":\"ok\"}",
 			path:        "/api/v1/records/1",
 			wantStatus:  http.StatusOK,
@@ -147,7 +138,6 @@ func Test_Updates_V1(t *testing.T) {
 		},
 		{
 			description: "Delete field in existing record",
-			method:      "POST",
 			body:        "{\"key1\":null,\"status\":null}",
 			path:        "/api/v1/records/1",
 			wantStatus:  http.StatusOK,
@@ -160,7 +150,8 @@ func Test_Updates_V1(t *testing.T) {
 			jsonBody := []byte(tc.body)
 			body := bytes.NewBuffer(jsonBody)
 
-			reqPost := httptest.NewRequest(tc.method, tc.path, body)
+			reqPost := httptest.NewRequest("POST", tc.path, body)
+			reqPost.Header.Set("Content-Type", "application/json")
 			rrPost := httptest.NewRecorder()
 			router.ServeHTTP(rrPost, reqPost)
 
@@ -168,6 +159,7 @@ func Test_Updates_V1(t *testing.T) {
 			require.Equal(t, tc.wantBody, rrPost.Body.String())
 
 			// every POST request is followed by a GET request to ensure that the record was actually created
+			// and returns same exact body as the POST request
 			reqGet := httptest.NewRequest("GET", tc.path, nil)
 			rrGet := httptest.NewRecorder()
 			router.ServeHTTP(rrGet, reqGet)
