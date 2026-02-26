@@ -23,3 +23,8 @@ type RecordService interface {
 	// UpdateRecord will error if id <= 0 or the record does not exist with that id.
 	UpdateRecord(ctx context.Context, id int, updates map[string]*string) (entity.Record, error)
 }
+
+type Storage interface {
+	InMemRecords() RecordService
+	PersistentRecords() RecordService
+}

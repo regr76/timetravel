@@ -8,11 +8,12 @@ import (
 	"github.com/gorilla/mux"
 
 	"github.com/regr76/timetravel/api/helpers"
+	"github.com/regr76/timetravel/service"
 )
 
 // GET /records/{id}
 // GetRecord retrieves the record.
-func GetRecords(a Storage, w http.ResponseWriter, r *http.Request) {
+func GetRecords(a service.Storage, w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	id := mux.Vars(r)["id"]
 
