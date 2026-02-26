@@ -37,7 +37,7 @@ func PostRecords(a Storage, w http.ResponseWriter, r *http.Request) {
 	}
 
 	// first retrieve the record
-	var record entity.Record
+	var record entity.InMemoryRecord
 	_, err = a.Records().GetRecord(
 		ctx,
 		int(idNumber),
@@ -55,7 +55,7 @@ func PostRecords(a Storage, w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
-		record = entity.Record{
+		record = entity.InMemoryRecord{
 			ID:   int(idNumber),
 			Data: recordMap,
 		}

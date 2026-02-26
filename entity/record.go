@@ -1,11 +1,11 @@
 package entity
 
-type Record struct {
+type InMemoryRecord struct {
 	ID   int               `json:"id"`
 	Data map[string]string `json:"data"`
 }
 
-func (d *Record) Copy() Record {
+func (d *InMemoryRecord) Copy() InMemoryRecord {
 	values := d.Data
 
 	newMap := map[string]string{}
@@ -13,7 +13,7 @@ func (d *Record) Copy() Record {
 		newMap[key] = value
 	}
 
-	return Record{
+	return InMemoryRecord{
 		ID:   d.ID,
 		Data: newMap,
 	}

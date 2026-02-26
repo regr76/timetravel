@@ -104,13 +104,20 @@ different object types. So in fact we implemented this across multiple different
 tables in our database. 
 
 
-## Reference -- The Current API
+## Reference -- V1 API
 
 The current API consists of just two endpoints:
 - `GET /api/v1/records/{id}`
 - `POST /api/v1/records/{id}`,
 
 All ids must be **positive integers**.
+
+## Reference -- V2 API
+- `GET /api/v1/records/{id}`
+- `POST /api/v1/records/{id}`
+- `GET /api/v1/records/{id}/version/{ver}`
+- `GET /api/v1/records/{id}/list`
+- `GET /api/v1/records/{id}/datetime`,
 
 ### `GET /api/v1/records/{id}`
 

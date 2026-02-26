@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 )
@@ -168,4 +170,36 @@ func Test_Updates_V1(t *testing.T) {
 			require.Equal(t, tc.wantBody, rrGet.Body.String())
 		})
 	}
+}
+
+// Benchmark_POST_Routes_V1-12            1        1036914167 ns/op        98356320 B/op     580426 allocs/op
+func Benchmark_POST_Routes_V1(b *testing.B) {
+	b.ReportAllocs()
+	b.ResetTimer()
+
+	app := NewAPI(nil)
+	router := app.SetupRouter()
+
+	var rrPost *httptest.ResponseRecorder
+
+	for n := 0; n < 10000; n++ {
+		bodyStr := "{" + "\"key" + strconv.Itoa(n) + "\":null," + "\"key" + strconv.Itoa(n+1) + "\":\"value" + strconv.Itoa(n+1) + "\"" + "}"
+		jsonBody := []byte(bodyStr)
+		body := bytes.NewBuffer(jsonBody)
+
+		reqPost := httptest.NewRequest("POST", "/api/v1/records/33", body)
+		reqPost.Header.Set("Content-Type", "application/json")
+		rrPost = httptest.NewRecorder()
+		router.ServeHTTP(rrPost, reqPost)
+	}
+
+	require.Equal(b, http.StatusOK, rrPost.Code)
+	time.Sleep(1 * time.Second)
+
+	reqGet := httptest.NewRequest("GET", "/api/v1/records/33", nil)
+	rrGet := httptest.NewRecorder()
+	router.ServeHTTP(rrGet, reqGet)
+
+	require.Equal(b, http.StatusOK, rrGet.Code)
+	require.Equal(b, "{\"id\":33,\"data\":{\"key10000\":\"value10000\"}}\n", rrGet.Body.String())
 }

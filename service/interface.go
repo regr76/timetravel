@@ -1,0 +1,25 @@
+package service
+
+import (
+	"context"
+
+	"github.com/regr76/timetravel/entity"
+)
+
+// Implements method to get, create, and update record data.
+type RecordService interface {
+
+	// GetRecord will retrieve an record.
+	GetRecord(ctx context.Context, id int) (entity.InMemoryRecord, error)
+
+	// CreateRecord will insert a new record.
+	//
+	// If it a record with that id already exists it will fail.
+	CreateRecord(ctx context.Context, record entity.InMemoryRecord) error
+
+	// UpdateRecord will change the internal `Map` values of the record if they exist.
+	// if the update[key] is null it will delete that key from the record's Map.
+	//
+	// UpdateRecord will error if id <= 0 or the record does not exist with that id.
+	UpdateRecord(ctx context.Context, id int, updates map[string]*string) (entity.InMemoryRecord, error)
+}
