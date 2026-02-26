@@ -65,14 +65,40 @@ func Test_POST_Routes_V1(t *testing.T) {
 		body        string // needed for POST requests only; can be empty for GET requests
 		path        string
 		wantStatus  int
-		wantBody    string
+		PostResBody string
+		GetResBody  string
 	}{
+		{
+			description: "Post to negative id",
+			body:        "{\"key1\":\"value1\",\"key2\":\"222\"}",
+			path:        "/api/v1/records/-11",
+			wantStatus:  http.StatusBadRequest,
+			PostResBody: "{\"error\":\"invalid id; id must be a positive number\"}\n",
+			GetResBody:  "{\"error\":\"invalid id; id must be a positive number\"}\n",
+		},
+		{
+			description: "Post to invalid id (non-numeric)",
+			body:        "{\"key1\":\"value1\",\"key2\":\"222\"}",
+			path:        "/api/v1/records/abc",
+			wantStatus:  http.StatusBadRequest,
+			PostResBody: "{\"error\":\"invalid id; id must be a positive number\"}\n",
+			GetResBody:  "{\"error\":\"invalid id; id must be a positive number\"}\n",
+		},
+		{
+			description: "Post invalid json body",
+			body:        "[{\"key1\":}]",
+			path:        "/api/v1/records/18",
+			wantStatus:  http.StatusBadRequest,
+			PostResBody: "{\"error\":\"invalid input; could not parse json\"}\n",
+			GetResBody:  "{\"error\":\"record of id 18 does not exist\"}\n",
+		},
 		{
 			description: "Post new record",
 			body:        "{\"key1\":\"value1\",\"key2\":\"222\"}",
 			path:        "/api/v1/records/1",
 			wantStatus:  http.StatusOK,
-			wantBody:    "{\"id\":1,\"data\":{\"key1\":\"value1\",\"key2\":\"222\"}}\n",
+			PostResBody: "{\"id\":1,\"data\":{\"key1\":\"value1\",\"key2\":\"222\"}}\n",
+			GetResBody:  "{\"id\":1,\"data\":{\"key1\":\"value1\",\"key2\":\"222\"}}\n",
 		},
 		{
 			description: "Update existing record",
@@ -81,7 +107,8 @@ func Test_POST_Routes_V1(t *testing.T) {
 			wantStatus:  http.StatusOK,
 			// the body has no key2 because we create a new router for each test case
 			// so the record created in the first test case is not persisted in the second test case for v1 api
-			wantBody: "{\"id\":1,\"data\":{\"key1\":\"value2\",\"status\":\"ok\"}}\n",
+			PostResBody: "{\"id\":1,\"data\":{\"key1\":\"value2\",\"status\":\"ok\"}}\n",
+			GetResBody:  "{\"id\":1,\"data\":{\"key1\":\"value2\",\"status\":\"ok\"}}\n",
 		},
 	}
 
@@ -99,7 +126,7 @@ func Test_POST_Routes_V1(t *testing.T) {
 			router.ServeHTTP(rrPost, reqPost)
 
 			require.Equal(t, tc.wantStatus, rrPost.Code)
-			require.Equal(t, tc.wantBody, rrPost.Body.String())
+			require.Equal(t, tc.PostResBody, rrPost.Body.String())
 
 			// every POST request is followed by a GET request to ensure that the record was actually created
 			// and returns same exact body as the POST request
@@ -108,7 +135,7 @@ func Test_POST_Routes_V1(t *testing.T) {
 			router.ServeHTTP(rrGet, reqGet)
 
 			require.Equal(t, tc.wantStatus, rrGet.Code)
-			require.Equal(t, tc.wantBody, rrGet.Body.String())
+			require.Equal(t, tc.GetResBody, rrGet.Body.String())
 		})
 	}
 }
