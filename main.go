@@ -9,7 +9,7 @@ import (
 )
 
 func main() {
-	app := api.NewAPI(nil)
+	app := api.NewAPI(nil, nil)
 	router := app.SetupRouter()
 
 	address := "127.0.0.1:8000"

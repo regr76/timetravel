@@ -8,23 +8,29 @@ import (
 
 	"github.com/regr76/timetravel/api/helpers"
 	v1 "github.com/regr76/timetravel/api/v1"
+	v2 "github.com/regr76/timetravel/api/v2"
 	"github.com/regr76/timetravel/service"
 )
 
 type API struct {
-	router  *mux.Router
-	records service.RecordService
+	router         *mux.Router
+	inMemRecords   service.RecordService
+	persistRecords service.RecordService
 }
 
-func NewAPI(records service.RecordService) *API {
-	return &API{records: records, router: mux.NewRouter()}
+func NewAPI(inMemRecords, persistRecords service.RecordService) *API {
+	return &API{inMemRecords: inMemRecords, persistRecords: persistRecords, router: mux.NewRouter()}
 }
 
-func (a *API) Records() service.RecordService {
-	return a.records
+func (a *API) InMemRecords() service.RecordService {
+	return a.inMemRecords
 }
 
-// generates all api routes
+func (a *API) PersistentRecords() service.RecordService {
+	return a.persistRecords
+}
+
+// generates all api routes for V1 and adds them to the router
 func (a *API) CreateRoutesV1(routes *mux.Router) {
 	routes.Path("/records/{id}").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		v1.GetRecords(a, w, r)
@@ -35,14 +41,30 @@ func (a *API) CreateRoutesV1(routes *mux.Router) {
 	}).Methods("POST")
 }
 
+// generates all api routes for V2 and adds them to the router
+func (a *API) CreateRoutesV2(routes *mux.Router) {
+	routes.Path("/records/{id}").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		v2.GetRecords(a, w, r)
+	}).Methods("GET")
+
+	routes.Path("/records/{id}").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		v2.PostRecords(a, w, r)
+	}).Methods("POST")
+}
+
 func (a *API) SetupRouter() *mux.Router {
-	service := service.NewInMemoryRecordService()
-	api := NewAPI(&service)
+	inMemService := service.NewInMemoryRecordService()
+	persistService := service.NewPersistentRecordService()
+	api := NewAPI(&inMemService, &persistService)
 
-	apiRoute := a.router.PathPrefix("/api/v1").Subrouter()
-	apiRoute.Path("/health").HandlerFunc(HealthCheckHandler)
+	apiRoute1 := a.router.PathPrefix("/api/v1").Subrouter()
+	apiRoute1.Path("/health").HandlerFunc(HealthCheckHandler)
 
-	api.CreateRoutesV1(apiRoute)
+	apiRoute2 := a.router.PathPrefix("/api/v2").Subrouter()
+	apiRoute2.Path("/health").HandlerFunc(HealthCheckHandler)
+
+	api.CreateRoutesV1(apiRoute1)
+	api.CreateRoutesV2(apiRoute2)
 
 	return a.router
 }
