@@ -1,4 +1,4 @@
-package api
+package v1
 
 import (
 	"encoding/json"
@@ -7,6 +7,8 @@ import (
 	"strconv"
 
 	"github.com/gorilla/mux"
+
+	"github.com/regr76/timetravel/api/helpers"
 	"github.com/regr76/timetravel/entity"
 	"github.com/regr76/timetravel/service"
 )
@@ -14,14 +16,14 @@ import (
 // POST /records/{id}
 // if the record exists, the record is updated.
 // if the record doesn't exist, the record is created.
-func (a *API) PostRecords(w http.ResponseWriter, r *http.Request) {
+func PostRecords(a Storage, w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	id := mux.Vars(r)["id"]
 	idNumber, err := strconv.ParseInt(id, 10, 32)
 
 	if err != nil || idNumber <= 0 {
-		err := writeError(w, "invalid id; id must be a positive number", http.StatusBadRequest)
-		logError(err)
+		err := helpers.WriteError(w, "invalid id; id must be a positive number", http.StatusBadRequest)
+		helpers.LogError(err)
 		return
 	}
 
@@ -29,20 +31,20 @@ func (a *API) PostRecords(w http.ResponseWriter, r *http.Request) {
 	err = json.NewDecoder(r.Body).Decode(&body)
 
 	if err != nil {
-		err := writeError(w, "invalid input; could not parse json", http.StatusBadRequest)
-		logError(err)
+		err := helpers.WriteError(w, "invalid input; could not parse json", http.StatusBadRequest)
+		helpers.LogError(err)
 		return
 	}
 
 	// first retrieve the record
 	var record entity.Record
-	_, err = a.records.GetRecord(
+	_, err = a.Records().GetRecord(
 		ctx,
 		int(idNumber),
 	)
 
 	if !errors.Is(err, service.ErrRecordDoesNotExist) { // record exists
-		record, err = a.records.UpdateRecord(ctx, int(idNumber), body)
+		record, err = a.Records().UpdateRecord(ctx, int(idNumber), body)
 	} else { // record does not exist
 
 		// exclude the delete updates
@@ -57,16 +59,16 @@ func (a *API) PostRecords(w http.ResponseWriter, r *http.Request) {
 			ID:   int(idNumber),
 			Data: recordMap,
 		}
-		err = a.records.CreateRecord(ctx, record)
+		err = a.Records().CreateRecord(ctx, record)
 	}
 
 	if err != nil {
-		errInWriting := writeError(w, ErrInternal.Error(), http.StatusInternalServerError)
-		logError(err)
-		logError(errInWriting)
+		errInWriting := helpers.WriteError(w, helpers.ErrInternal.Error(), http.StatusInternalServerError)
+		helpers.LogError(err)
+		helpers.LogError(errInWriting)
 		return
 	}
 
-	err = writeJSON(w, record, http.StatusOK)
-	logError(err)
+	err = helpers.WriteJSON(w, record, http.StatusOK)
+	helpers.LogError(err)
 }

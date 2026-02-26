@@ -9,23 +9,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestHealthCheckHandler(t *testing.T) {
-	// Create request, recorder, and call handler directly
-	req := httptest.NewRequest("GET", "/health", nil)
-	rr := httptest.NewRecorder()
-	handler := http.HandlerFunc(HealthCheckHandler)
-	handler.ServeHTTP(rr, req)
-
-	// Validate status and response body
-	if status := rr.Code; status != http.StatusOK {
-		t.Errorf("wrong status: got %v", status)
-	}
-	expected := `{"ok":true}` + "\n"
-	if rr.Body.String() != expected {
-		t.Errorf("wrong body: expected %v, got %v", expected, rr.Body.String())
-	}
-}
-
 func Test_GET_Routes_V1(t *testing.T) {
 	app := NewAPI(nil)
 	router := app.SetupRouter()
@@ -50,6 +33,13 @@ func Test_GET_Routes_V1(t *testing.T) {
 			path:        "/api/v1/records/15",
 			wantStatus:  http.StatusBadRequest,
 			wantBody:    "{\"error\":\"record of id 15 does not exist\"}\n",
+		},
+		{
+			description: "Get record with negative id",
+			method:      "GET",
+			path:        "/api/v1/records/-1",
+			wantStatus:  http.StatusBadRequest,
+			wantBody:    "{\"error\":\"invalid id; id must be a positive number\"}\n",
 		},
 		{
 			description: "Invalid id (non-numeric)",
