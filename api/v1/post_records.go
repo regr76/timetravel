@@ -37,14 +37,23 @@ func PostRecords(a Storage, w http.ResponseWriter, r *http.Request) {
 	}
 
 	// first retrieve the record
-	var record entity.InMemoryRecord
+	var record *entity.InMemoryRecord
 	_, err = a.Records().GetRecord(
 		ctx,
 		int(idNumber),
 	)
 
 	if !errors.Is(err, service.ErrRecordDoesNotExist) { // record exists
-		record, err = a.Records().UpdateRecord(ctx, int(idNumber), body)
+		temp, err := a.Records().UpdateRecord(ctx, int(idNumber), body)
+		record = temp.(*entity.InMemoryRecord)
+
+		if err != nil {
+			errInWriting := helpers.WriteError(w, helpers.ErrInternal.Error(), http.StatusInternalServerError)
+			helpers.LogError(err)
+			helpers.LogError(errInWriting)
+			return
+		}
+
 	} else { // record does not exist
 
 		// exclude the delete updates
@@ -55,10 +64,10 @@ func PostRecords(a Storage, w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
-		record = entity.InMemoryRecord{
-			ID:   int(idNumber),
-			Data: recordMap,
-		}
+		record = &entity.InMemoryRecord{}
+		record.SetID(int(idNumber))
+		record.SetData(recordMap)
+
 		err = a.Records().CreateRecord(ctx, record)
 	}
 

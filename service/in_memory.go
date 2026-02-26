@@ -22,42 +22,45 @@ func NewInMemoryRecordService() InMemoryRecordService {
 	}
 }
 
-func (s *InMemoryRecordService) GetRecord(ctx context.Context, id int) (entity.InMemoryRecord, error) {
+func (s *InMemoryRecordService) GetRecord(ctx context.Context, id int) (entity.Record, error) {
 	record := s.data[id]
-	if record.ID == 0 {
-		return entity.InMemoryRecord{}, ErrRecordDoesNotExist
+	if record.GetID() == 0 {
+		return nil, ErrRecordDoesNotExist
 	}
 
-	record = record.Copy() // copy is necessary so modifations to the record don't change the stored record
-	return record, nil
+	copied, ok := record.Copy().(*entity.InMemoryRecord) // copy is necessary so modifations to the record don't change the stored record
+	if !ok {
+		return nil, errors.New("failed to cast record to InMemoryRecord")
+	}
+	return copied, nil
 }
 
-func (s *InMemoryRecordService) CreateRecord(ctx context.Context, record entity.InMemoryRecord) error {
-	id := record.ID
+func (s *InMemoryRecordService) CreateRecord(ctx context.Context, record entity.Record) error {
+	id := record.GetID()
 	if id <= 0 {
 		return ErrRecordIDInvalid
 	}
 
 	existingRecord := s.data[id]
-	if existingRecord.ID != 0 {
+	if existingRecord.GetID() != 0 {
 		return ErrRecordAlreadyExists
 	}
 
-	s.data[id] = record
+	s.data[id] = *(record.(*entity.InMemoryRecord))
 	return nil
 }
 
-func (s *InMemoryRecordService) UpdateRecord(ctx context.Context, id int, updates map[string]*string) (entity.InMemoryRecord, error) {
+func (s *InMemoryRecordService) UpdateRecord(ctx context.Context, id int, updates map[string]*string) (entity.Record, error) {
 	entry := s.data[id]
-	if entry.ID == 0 {
-		return entity.InMemoryRecord{}, ErrRecordDoesNotExist
+	if entry.GetID() == 0 {
+		return nil, ErrRecordDoesNotExist
 	}
 
 	for key, value := range updates {
 		if value == nil { // deletion update
-			delete(entry.Data, key)
+			delete(entry.GetData(), key)
 		} else {
-			entry.Data[key] = *value
+			entry.GetData()[key] = *value
 		}
 	}
 

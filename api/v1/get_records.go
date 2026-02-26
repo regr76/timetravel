@@ -8,12 +8,7 @@ import (
 	"github.com/gorilla/mux"
 
 	"github.com/regr76/timetravel/api/helpers"
-	"github.com/regr76/timetravel/service"
 )
-
-type Storage interface {
-	Records() service.RecordService
-}
 
 // GET /records/{id}
 // GetRecord retrieves the record.
