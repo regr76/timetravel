@@ -16,11 +16,11 @@ import (
 type API struct {
 	router         *mux.Router
 	inMemRecords   service.RecordService
-	persistRecords service.RecordService
+	persistRecords service.VersionedRecordService
 	db             *sql.DB
 }
 
-func NewAPI(inMemRecords, persistRecords service.RecordService, db *sql.DB) *API {
+func NewAPI(inMemRecords service.RecordService, persistRecords service.VersionedRecordService, db *sql.DB) *API {
 	return &API{
 		inMemRecords:   inMemRecords,
 		persistRecords: persistRecords,
@@ -33,7 +33,7 @@ func (a *API) InMemRecords() service.RecordService {
 	return a.inMemRecords
 }
 
-func (a *API) PersistentRecords() service.RecordService {
+func (a *API) PersistentRecords() service.VersionedRecordService {
 	return a.persistRecords
 }
 

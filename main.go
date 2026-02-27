@@ -22,10 +22,6 @@ func main() {
 			log.Printf("db close: %v", cerr)
 		}
 	}()
-	// Verify the connection
-	if err := db.Ping(); err != nil {
-		log.Fatal(err)
-	}
 
 	app := api.NewAPI(nil, nil, db)
 	router := app.SetupRouter(db)

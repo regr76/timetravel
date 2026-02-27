@@ -5,3 +5,7 @@ tt.exe
 *.coverprofile
 *coverage.out
 vendor/
+
+
+timetravel.db
+unit_test.db

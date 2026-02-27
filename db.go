@@ -2,6 +2,8 @@ package main
 
 import (
 	"database/sql"
+	"log"
+	"time"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -10,6 +12,15 @@ func initDB(filename string) (*sql.DB, error) {
 	db, err := sql.Open("sqlite3", "file:"+filename+"?cache=shared&mode=rwc")
 	if err != nil {
 		return nil, err
+	}
+
+	db.SetMaxIdleConns(5)
+	db.SetMaxOpenConns(15)
+	db.SetConnMaxLifetime(5 * time.Minute)
+
+	// Verify the connection
+	if err := db.Ping(); err != nil {
+		log.Fatal(err)
 	}
 
 	createTableQuery := `

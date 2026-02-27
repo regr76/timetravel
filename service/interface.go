@@ -24,7 +24,12 @@ type RecordService interface {
 	UpdateRecord(ctx context.Context, id int, updates map[string]*string) (entity.Record, error)
 }
 
+type VersionedRecordService interface {
+	RecordService
+	ListRecords(ctx context.Context, id, ver int) (entity.Record, error)
+}
+
 type Storage interface {
 	InMemRecords() RecordService
-	PersistentRecords() RecordService
+	PersistentRecords() VersionedRecordService
 }

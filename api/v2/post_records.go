@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/gorilla/mux"
 
@@ -14,7 +15,7 @@ import (
 )
 
 // POST /records/{id}
-// if the record exists, the record is updated.
+// if the record exists, the record is updated with a new version.
 // if the record doesn't exist, the record is created.
 func PostRecords(a service.Storage, w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
@@ -37,7 +38,7 @@ func PostRecords(a service.Storage, w http.ResponseWriter, r *http.Request) {
 	}
 
 	// first retrieve the record
-	var record *entity.InMemoryRecord
+	var record *entity.PersistentRecord
 	_, err = a.PersistentRecords().GetRecord(
 		ctx,
 		int(idNumber),
@@ -45,7 +46,7 @@ func PostRecords(a service.Storage, w http.ResponseWriter, r *http.Request) {
 
 	if !errors.Is(err, service.ErrRecordDoesNotExist) { // record exists
 		temp, err := a.PersistentRecords().UpdateRecord(ctx, int(idNumber), body)
-		record = temp.(*entity.InMemoryRecord)
+		record = temp.(*entity.PersistentRecord)
 
 		if err != nil {
 			errInWriting := helpers.WriteError(w, helpers.ErrInternal.Error(), http.StatusInternalServerError)
@@ -64,9 +65,12 @@ func PostRecords(a service.Storage, w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
-		record = &entity.InMemoryRecord{
-			ID:   int(idNumber),
-			Data: recordMap,
+		record = &entity.PersistentRecord{
+			ID:      int(idNumber),
+			Version: 1, // start version at 1 since the record is being created
+			Start:   time.Now().UTC().Format("20060102150405"),
+			End:     "",
+			Data:    recordMap,
 		}
 		err = a.PersistentRecords().CreateRecord(ctx, record)
 	}
