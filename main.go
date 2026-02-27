@@ -6,13 +6,14 @@ import (
 	"time"
 
 	"github.com/regr76/timetravel/api"
+	"github.com/regr76/timetravel/dbutils"
 )
 
 func main() {
 	filename := "timetravel.db"
 	log.Printf("initializing database with file %s", filename)
 
-	db, err := initDB(filename)
+	db, err := dbutils.InitDB(filename)
 	if err != nil {
 		log.Fatal(err)
 	}

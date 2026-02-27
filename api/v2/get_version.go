@@ -11,8 +11,8 @@ import (
 	"github.com/regr76/timetravel/service"
 )
 
-// GET /records/{id}
-// GetRecord retrieves the record.
+// GET /records/{id}/versions/{version}
+// GetVersion retrieves the record of a specific version.
 func GetVersion(a service.Storage, w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	id := mux.Vars(r)["id"]

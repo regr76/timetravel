@@ -328,7 +328,7 @@ func Test_POST_Routes_V2(t *testing.T) {
 			path:        "/api/v2/records/1",
 			wantStatus:  http.StatusOK,
 			PostResBody: "{\"id\":1,\"data\":{\"key1\":\"value1\",\"key2\":\"222\"}}\n",
-			GetResBody:  `^\{"id":1,"version":1,"start_dt":"\d+","data":\{"key1":"value1","key2":"222"\}\}\n$`,
+			GetResBody:  `^\{"id":1,"version":1,"start":"\d+","data":\{"key1":"value1","key2":"222"\}\}\n$`,
 		},
 		{
 			description: "Update existing record",
@@ -338,7 +338,7 @@ func Test_POST_Routes_V2(t *testing.T) {
 			// the body has no key2 because we create a new router for each test case
 			// so the record created in the first test case is not persisted in the second test case for v1 api
 			PostResBody: "{\"id\":1,\"data\":{\"key1\":\"value2\",\"status\":\"ok\"}}\n",
-			GetResBody:  `^\{"id":1,"version":1,"start_dt":"\d+","data":\{"key1":"value2","key2":"222","status":"ok"\}\}\n$`,
+			GetResBody:  `^\{"id":1,"version":1,"start":"\d+","data":\{"key1":"value2","key2":"222","status":"ok"\}\}\n$`,
 		},
 	}
 

@@ -63,7 +63,7 @@ func (a *API) CreateRoutesV2(routes *mux.Router) {
 	}).Methods("GET")
 
 	routes.Path("/records/{id}").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		v2.PostRecords(a, w, r)
+		v2.UpdateRecords(a, w, r)
 	}).Methods("POST")
 }
 

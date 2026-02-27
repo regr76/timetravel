@@ -5,8 +5,8 @@ import "maps"
 type PersistentRecord struct {
 	ID      int               `json:"id"`
 	Version int               `json:"version"`
-	Start   string            `json:"start_dt"`
-	End     string            `json:"end_dt,omitempty"`
+	Start   string            `json:"start"`
+	End     string            `json:"end,omitempty"`
 	Data    map[string]string `json:"data"`
 }
 

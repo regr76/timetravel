@@ -3,9 +3,11 @@ package service
 import (
 	"context"
 	"database/sql"
-	"errors"
+	"encoding/json"
+	"fmt"
 	"time"
 
+	"github.com/regr76/timetravel/dbutils"
 	"github.com/regr76/timetravel/entity"
 )
 
@@ -26,48 +28,63 @@ func NewPersistentRecordService(db *sql.DB) PersistentRecordService {
 
 // GetRecord will retrieve record with latest version.
 func (s *PersistentRecordService) GetRecord(ctx context.Context, id int) (entity.Record, error) {
-	records := s.data[id]
-	if len(records) == 0 {
+	recordStr, err := dbutils.ReadLatestVersion(s.db, id)
+	if err != nil {
+		return nil, err
+	}
+	if recordStr == "" {
 		return nil, ErrRecordDoesNotExist
 	}
 
-	record := records[len(records)-1] // get the latest version of the record
-
-	copied, ok := record.Copy().(*entity.PersistentRecord) // copy is necessary so modifations to the record don't change the stored record
-	if !ok {
-		return nil, errors.New("failed to cast record to PersistentRecord")
+	// unmarshal data from json string to map[string]string
+	output := &entity.PersistentRecord{}
+	errUnMar := json.Unmarshal([]byte(recordStr), output)
+	if errUnMar != nil {
+		return nil, errUnMar
 	}
-	return copied, nil
+
+	return output, nil
 }
 
 func (s *PersistentRecordService) GetVersion(ctx context.Context, id int, version int) (entity.Record, error) {
-	records := s.data[id]
-	if len(records) == 0 {
+	recordStr, err := dbutils.ReadOneVersion(s.db, id, version)
+	if err != nil {
+		return nil, err
+	}
+	if recordStr == "" {
 		return nil, ErrRecordDoesNotExist
 	}
 
-	for _, record := range records {
-		if record.Version == version {
-			copied, ok := record.Copy().(*entity.PersistentRecord) // copy is necessary so modifations to the record don't change the stored record
-			if !ok {
-				return nil, errors.New("failed to cast record to PersistentRecord")
-			}
-			return copied, nil
-		}
+	// unmarshal data from json string to map[string]string
+	output := &entity.PersistentRecord{}
+	errUnMar := json.Unmarshal([]byte(recordStr), output)
+	if errUnMar != nil {
+		return nil, errUnMar
 	}
 
-	return nil, ErrVersionDoesNotExist
+	return output, nil
 }
 
 // ListRecords will retrieve record containing all versions.
 func (s *PersistentRecordService) ListRecords(ctx context.Context, id int) (entity.VersionedRecords, error) {
-	records := s.data[id]
-	if len(records) == 0 {
+	recordsStr, err := dbutils.ReadAllVersions(s.db, id)
+
+	if err != nil {
+		return nil, err
+	}
+	if len(recordsStr) == 0 {
 		return nil, ErrRecordDoesNotExist
 	}
 
-	output := &entity.PersistentRecords{
-		Records: records,
+	// unmarshal data from json string to map[string]string
+	output := &entity.PersistentRecords{}
+	for _, recordStr := range recordsStr {
+		var record entity.PersistentRecord
+		errUnMar := json.Unmarshal([]byte(recordStr), &record)
+		if errUnMar != nil {
+			return nil, errUnMar
+		}
+		output.Records = append(output.Records, record)
 	}
 
 	return output.Copy(), nil
@@ -80,60 +97,102 @@ func (s *PersistentRecordService) CreateRecord(ctx context.Context, record entit
 		return ErrRecordIDInvalid
 	}
 
-	// single read for the entire list of versions. May be optimized to read last row only.
-	existingRecord := s.data[id]
-	if len(existingRecord) != 0 {
-		return ErrRecordAlreadyExists
+	formattedData := `{}`
+	data := record.GetData()
+	if data != nil {
+		formattedData = `{`
+		for key, value := range data {
+			formattedData += fmt.Sprintf(`"%s":"%s",`, key, value)
+		}
+		formattedData = formattedData[:len(formattedData)-1] + `}` // remove trailing comma and add closing bracket
 	}
 
-	newRecord := entity.PersistentRecord{
-		ID:      record.GetID(),
-		Version: 1,
-		Start:   time.Now().UTC().Format(PersistentTimeFormat),
-		End:     "",
-		Data:    record.GetData(),
-	}
-
-	s.data[id] = append(s.data[id], newRecord)
-	return nil
+	return dbutils.WriteVersion(s.db, id, 1, time.Now().UTC().Format(PersistentTimeFormat), "", formattedData)
 }
 
 // UpdateRecord will update End of last version, and add a new record with incremented version.
 func (s *PersistentRecordService) UpdateRecord(ctx context.Context, id int, updates map[string]*string) (entity.Record, error) {
-	// single read for the entire list of versions
-	existingRecord := s.data[id]
-	lenSoFar := len(existingRecord)
-	if lenSoFar == 0 {
-		return nil, ErrRecordDoesNotExist
+	var version int
+	copyOfLastVersion := &entity.PersistentRecord{}
+	// first retrieve the record to see if an existing version exists
+	recordStr, err := dbutils.ReadLatestVersion(s.db, id)
+
+	if recordStr == "" || err != nil { // record does not exist, create new record with version 1
+		version = 1
+	} else { // record exists, need to update the End time of the last version and add a new version with updated data
+
+		// unmarshal data from json string to map[string]string
+		errUnMar := json.Unmarshal([]byte(recordStr), copyOfLastVersion)
+		if errUnMar != nil {
+			return nil, errUnMar
+		}
+
+		version = copyOfLastVersion.Version
+
+		copyOfLastVersion.End = time.Now().UTC().Format(PersistentTimeFormat) // set end time for last version
+
+		errWr := dbutils.UpdateVersion(
+			s.db,
+			copyOfLastVersion.GetID(),
+			version,
+			copyOfLastVersion.End,
+		)
+		if errWr != nil {
+			return nil, errWr
+		}
+
+		version += 1 // increment version for the new version to be created
 	}
 
-	copyOfLastVersion, ok := existingRecord[lenSoFar-1].Copy().(*entity.PersistentRecord) // get the latest version of the record
-	if !ok {
-		return nil, errors.New("failed to cast record to PersistentRecord")
-	}
-
-	copyOfLastVersion.End = time.Now().UTC().Format(PersistentTimeFormat) // set end time for last version
-
+	// now create the new version with updated data
 	newData := copyOfLastVersion.Copy().(*entity.PersistentRecord).GetData() // copy data from last version for the new version
-
+	if newData == nil {
+		newData = map[string]string{}
+	}
 	for key, value := range updates {
 		if value == nil { // deletion update
 			delete(newData, key)
 		} else {
-			newData[key] = *value
+			if value != nil {
+				newData[key] = *value
+			}
 		}
 	}
 
-	newVersion := entity.PersistentRecord{
-		ID:      copyOfLastVersion.ID,
-		Version: copyOfLastVersion.Version + 1,
-		Start:   copyOfLastVersion.End,
+	formattedData := `{}`
+	if newData != nil || len(newData) > 0 {
+		formattedData = `{`
+		for key, value := range newData {
+			formattedData += fmt.Sprintf(`"%s":"%s",`, key, value)
+		}
+		formattedData = formattedData[:len(formattedData)-1] + `}` // remove trailing comma and add closing bracket
+	}
+	newVersion := &entity.PersistentRecord{
+		ID:      id,
+		Version: version,
+		Start:   time.Now().UTC().Format(PersistentTimeFormat),
 		End:     "",
 		Data:    newData,
 	}
+	errWr := dbutils.WriteVersion(
+		s.db,
+		newVersion.GetID(),
+		newVersion.Version,
+		newVersion.Start,
+		newVersion.End,
+		formattedData,
+	)
+	if errWr != nil {
+		return nil, errWr
+	}
 
-	s.data[id][lenSoFar-1] = *copyOfLastVersion
-	s.data[id] = append(s.data[id], newVersion)
+	return newVersion, nil
+}
 
-	return newVersion.Copy(), nil
+func (s *PersistentRecordService) ExportAllRecords(ctx context.Context) ([]string, error) {
+	recordsStr, err := dbutils.ReadAllRows(s.db)
+	if err != nil {
+		return nil, err
+	}
+	return recordsStr, nil
 }
