@@ -26,6 +26,7 @@ type RecordService interface {
 
 type VersionedRecordService interface {
 	RecordService
+	GetVersion(ctx context.Context, id int, version int) (entity.Record, error)
 	ListRecords(ctx context.Context, id int) (entity.VersionedRecords, error)
 }
 

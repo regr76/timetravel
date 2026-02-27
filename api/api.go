@@ -54,6 +54,10 @@ func (a *API) CreateRoutesV2(routes *mux.Router) {
 		v2.ListRecords(a, w, r)
 	}).Methods("GET")
 
+	routes.Path("/records/{id}/versions/{version}").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		v2.GetVersion(a, w, r)
+	}).Methods("GET")
+
 	routes.Path("/records/{id}").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		v2.GetRecords(a, w, r)
 	}).Methods("GET")
@@ -69,13 +73,12 @@ func (a *API) SetupRouter(db *sql.DB) *mux.Router {
 	api := NewAPI(&inMemService, &persistService, db)
 
 	apiRoute1 := a.router.PathPrefix("/api/v1").Subrouter()
-	apiRoute1.Path("/health").HandlerFunc(HealthCheckHandler)
-
 	apiRoute2 := a.router.PathPrefix("/api/v2").Subrouter()
-	apiRoute2.Path("/health").HandlerFunc(HealthCheckHandler)
 
 	api.CreateRoutesV1(apiRoute1)
 	api.CreateRoutesV2(apiRoute2)
+
+	a.router.Path("/health").HandlerFunc(HealthCheckHandler)
 
 	return a.router
 }

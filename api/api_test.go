@@ -267,6 +267,12 @@ func Test_GET_Routes_V2(t *testing.T) {
 			wantStatus:  http.StatusBadRequest,
 			wantBody:    "{\"error\":\"invalid id; id must be a positive number\"}\n",
 		},
+		{
+			description: "Get non-existent record list",
+			path:        "/api/v2/records/15/list",
+			wantStatus:  http.StatusBadRequest,
+			wantBody:    "{\"error\":\"record of id 15 does not exist\"}\n",
+		},
 	}
 
 	for _, tc := range tests {
