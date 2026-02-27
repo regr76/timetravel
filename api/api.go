@@ -50,6 +50,10 @@ func (a *API) CreateRoutesV1(routes *mux.Router) {
 
 // generates all api routes for V2 and adds them to the router
 func (a *API) CreateRoutesV2(routes *mux.Router) {
+	routes.Path("/records/{id}/list").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		v2.ListRecords(a, w, r)
+	}).Methods("GET")
+
 	routes.Path("/records/{id}").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		v2.GetRecords(a, w, r)
 	}).Methods("GET")

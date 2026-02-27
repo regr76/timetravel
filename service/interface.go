@@ -26,7 +26,7 @@ type RecordService interface {
 
 type VersionedRecordService interface {
 	RecordService
-	ListRecords(ctx context.Context, id, ver int) (entity.Record, error)
+	ListRecords(ctx context.Context, id int) (entity.VersionedRecords, error)
 }
 
 type Storage interface {

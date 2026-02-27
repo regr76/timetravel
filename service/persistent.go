@@ -39,23 +39,17 @@ func (s *PersistentRecordService) GetRecord(ctx context.Context, id int) (entity
 }
 
 // ListRecords will retrieve record containing all versions.
-func (s *PersistentRecordService) ListRecords(ctx context.Context, id, ver int) (entity.Record, error) {
+func (s *PersistentRecordService) ListRecords(ctx context.Context, id int) (entity.VersionedRecords, error) {
 	records := s.data[id]
 	if len(records) == 0 {
 		return nil, ErrRecordDoesNotExist
 	}
 
-	if ver < 1 || ver > len(records) {
-		return nil, ErrVersionDoesNotExist
+	output := &entity.PersistentRecords{
+		Records: records,
 	}
 
-	record := records[len(records)-1] // get the latest version of the record
-
-	copied, ok := record.Copy().(*entity.PersistentRecord) // copy is necessary so modifations to the record don't change the stored record
-	if !ok {
-		return nil, errors.New("failed to cast record to PersistentRecord")
-	}
-	return copied, nil
+	return output.Copy(), nil
 }
 
 // CreateRecord will create record with version 1.

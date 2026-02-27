@@ -10,6 +10,20 @@ type PersistentRecord struct {
 	Data    map[string]string `json:"data"`
 }
 
+type PersistentRecords struct {
+	Records []PersistentRecord `json:"records"`
+}
+
+func (d *PersistentRecords) Copy() VersionedRecords {
+	output := PersistentRecords{
+		Records: make([]PersistentRecord, len(d.Records)),
+	}
+	for i, record := range d.Records {
+		output.Records[i] = *record.Copy().(*PersistentRecord)
+	}
+	return &output
+}
+
 func (d *PersistentRecord) Copy() Record {
 	return &PersistentRecord{
 		ID:      d.ID,

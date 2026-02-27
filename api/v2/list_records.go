@@ -15,7 +15,6 @@ import (
 func ListRecords(a service.Storage, w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	id := mux.Vars(r)["id"]
-	ver := mux.Vars(r)["version"]
 
 	idNumber, err := strconv.ParseInt(id, 10, 32)
 	if err != nil || idNumber <= 0 {
@@ -24,20 +23,12 @@ func ListRecords(a service.Storage, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	verNumber, err := strconv.ParseInt(ver, 10, 32)
-	if err != nil || verNumber <= 0 {
-		err := helpers.WriteError(w, "invalid version; version must be a positive number", http.StatusBadRequest)
-		helpers.LogError(err)
-		return
-	}
-
 	records, err := a.PersistentRecords().ListRecords(
 		ctx,
 		int(idNumber),
-		int(verNumber),
 	)
 	if err != nil {
-		err := helpers.WriteError(w, fmt.Sprintf("record of id %v and version %v does not exist", idNumber, verNumber), http.StatusBadRequest)
+		err := helpers.WriteError(w, fmt.Sprintf("record of id %v does not exist", idNumber), http.StatusBadRequest)
 		helpers.LogError(err)
 		return
 	}
