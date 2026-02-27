@@ -1,6 +1,7 @@
 package api
 
 import (
+	"database/sql"
 	"encoding/json"
 	"net/http"
 
@@ -16,10 +17,16 @@ type API struct {
 	router         *mux.Router
 	inMemRecords   service.RecordService
 	persistRecords service.RecordService
+	db             *sql.DB
 }
 
-func NewAPI(inMemRecords, persistRecords service.RecordService) *API {
-	return &API{inMemRecords: inMemRecords, persistRecords: persistRecords, router: mux.NewRouter()}
+func NewAPI(inMemRecords, persistRecords service.RecordService, db *sql.DB) *API {
+	return &API{
+		inMemRecords:   inMemRecords,
+		persistRecords: persistRecords,
+		router:         mux.NewRouter(),
+		db:             db,
+	}
 }
 
 func (a *API) InMemRecords() service.RecordService {
@@ -52,10 +59,10 @@ func (a *API) CreateRoutesV2(routes *mux.Router) {
 	}).Methods("POST")
 }
 
-func (a *API) SetupRouter() *mux.Router {
+func (a *API) SetupRouter(db *sql.DB) *mux.Router {
 	inMemService := service.NewInMemoryRecordService()
-	persistService := service.NewPersistentRecordService()
-	api := NewAPI(&inMemService, &persistService)
+	persistService := service.NewPersistentRecordService(db)
+	api := NewAPI(&inMemService, &persistService, db)
 
 	apiRoute1 := a.router.PathPrefix("/api/v1").Subrouter()
 	apiRoute1.Path("/health").HandlerFunc(HealthCheckHandler)

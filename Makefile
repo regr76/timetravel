@@ -2,9 +2,8 @@ export GOMOD=go.mod
 export GORACE=halt_on_error=1
 export GOFLAGS=
 export CGO_ENABLED=1
-export CGO_LDFLAGS="-Wl,-rpath,/usr/local/lib"
 
-DATE=$(date +'%Y.%m.%d.%H:%M:%S')
+DATE=$(shell date +'%Y.%m.%d.%H:%M:%S')
 TARGET=tt
 
 # for cloud build, if we do not have a build env variable set
@@ -13,7 +12,7 @@ ifndef BUILD
 override BUILD = 1.0
 endif
 
-LDFLAGS=-ldflags "-X main.Build="$(BUILD)" -X main.BuildDate="$(DATE)""
+LDFLAGS=-ldflags "-X main.Build=$(BUILD) -X main.BuildDate=$(DATE)"
 
 .PHONY: all build build-race clean fmt vet bench test test-coverage lint
 
@@ -22,10 +21,10 @@ default: all
 all: clean fmt lint vet test build
 
 build:
-	go build $(LDFLAGS) -o $(TARGET) main.go
+	go build $(LDFLAGS) -o $(TARGET)
 
 build-race:
-	go build -race $(LDFLAGS) -o $(TARGET) main.go
+	go build -race $(LDFLAGS) -o $(TARGET)
 
 clean:
 	rm -f $(TARGET)

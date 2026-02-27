@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"time"
 
@@ -11,11 +12,13 @@ import (
 // PersistentRecordService is an in-memory implementation of RecordService.
 type PersistentRecordService struct {
 	data map[int][]entity.PersistentRecord
+	db   *sql.DB
 }
 
-func NewPersistentRecordService() PersistentRecordService {
+func NewPersistentRecordService(db *sql.DB) PersistentRecordService {
 	return PersistentRecordService{
 		data: map[int][]entity.PersistentRecord{},
+		db:   db,
 	}
 }
 

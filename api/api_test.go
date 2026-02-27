@@ -12,8 +12,8 @@ import (
 )
 
 func Test_GET_Routes_V1(t *testing.T) {
-	app := NewAPI(nil, nil)
-	router := app.SetupRouter()
+	app := NewAPI(nil, nil, nil)
+	router := app.SetupRouter(nil)
 
 	tests := []struct {
 		description string
@@ -114,8 +114,8 @@ func Test_POST_Routes_V1(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.description, func(t *testing.T) {
-			app := NewAPI(nil, nil)
-			router := app.SetupRouter()
+			app := NewAPI(nil, nil, nil)
+			router := app.SetupRouter(nil)
 
 			jsonBody := []byte(tc.body)
 			body := bytes.NewBuffer(jsonBody)
@@ -141,8 +141,8 @@ func Test_POST_Routes_V1(t *testing.T) {
 }
 
 func Test_Updates_V1(t *testing.T) {
-	app := NewAPI(nil, nil)
-	router := app.SetupRouter()
+	app := NewAPI(nil, nil, nil)
+	router := app.SetupRouter(nil)
 
 	tests := []struct {
 		description string
@@ -204,8 +204,8 @@ func Benchmark_POST_Routes_V1(b *testing.B) {
 	b.ReportAllocs()
 	b.ResetTimer()
 
-	app := NewAPI(nil, nil)
-	router := app.SetupRouter()
+	app := NewAPI(nil, nil, nil)
+	router := app.SetupRouter(nil)
 
 	var rrPost *httptest.ResponseRecorder
 
@@ -232,8 +232,8 @@ func Benchmark_POST_Routes_V1(b *testing.B) {
 }
 
 func Test_GET_Routes_V2(t *testing.T) {
-	app := NewAPI(nil, nil)
-	router := app.SetupRouter()
+	app := NewAPI(nil, nil, nil)
+	router := app.SetupRouter(nil)
 
 	tests := []struct {
 		description string
@@ -339,8 +339,8 @@ func Test_POST_Routes_V2(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.description, func(t *testing.T) {
-			app := NewAPI(nil, nil)
-			router := app.SetupRouter()
+			app := NewAPI(nil, nil, nil)
+			router := app.SetupRouter(nil)
 
 			jsonBody := []byte(tc.body)
 			body := bytes.NewBuffer(jsonBody)
@@ -371,8 +371,8 @@ func Test_POST_Routes_V2(t *testing.T) {
 func Test_Updates_V2(t *testing.T) {
 	t.Skip()
 
-	app := NewAPI(nil, nil)
-	router := app.SetupRouter()
+	app := NewAPI(nil, nil, nil)
+	router := app.SetupRouter(nil)
 
 	tests := []struct {
 		description string
