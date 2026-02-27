@@ -80,6 +80,7 @@ func (s *PersistentRecordService) CreateRecord(ctx context.Context, record entit
 		return ErrRecordIDInvalid
 	}
 
+	// single read for the entire list of versions. May be optimized to read last row only.
 	existingRecord := s.data[id]
 	if len(existingRecord) != 0 {
 		return ErrRecordAlreadyExists
@@ -99,31 +100,40 @@ func (s *PersistentRecordService) CreateRecord(ctx context.Context, record entit
 
 // UpdateRecord will update End of last version, and add a new record with incremented version.
 func (s *PersistentRecordService) UpdateRecord(ctx context.Context, id int, updates map[string]*string) (entity.Record, error) {
+	// single read for the entire list of versions
 	existingRecord := s.data[id]
-	if len(existingRecord) == 0 {
+	lenSoFar := len(existingRecord)
+	if lenSoFar == 0 {
 		return nil, ErrRecordDoesNotExist
 	}
 
-	existingRecord[len(existingRecord)-1].End = time.Now().UTC().Format(PersistentTimeFormat) // set end time for last version
+	copyOfLastVersion, ok := existingRecord[lenSoFar-1].Copy().(*entity.PersistentRecord) // get the latest version of the record
+	if !ok {
+		return nil, errors.New("failed to cast record to PersistentRecord")
+	}
 
-	lastEntry := existingRecord[len(existingRecord)-1] // get the latest version of the record
+	copyOfLastVersion.End = time.Now().UTC().Format(PersistentTimeFormat) // set end time for last version
+
+	newData := copyOfLastVersion.Copy().(*entity.PersistentRecord).GetData() // copy data from last version for the new version
 
 	for key, value := range updates {
 		if value == nil { // deletion update
-			delete(lastEntry.GetData(), key)
+			delete(newData, key)
 		} else {
-			lastEntry.GetData()[key] = *value
+			newData[key] = *value
 		}
 	}
 
-	newRecord := entity.PersistentRecord{
-		ID:      lastEntry.ID,
-		Version: lastEntry.Version + 1,
-		Start:   lastEntry.End,
+	newVersion := entity.PersistentRecord{
+		ID:      copyOfLastVersion.ID,
+		Version: copyOfLastVersion.Version + 1,
+		Start:   copyOfLastVersion.End,
 		End:     "",
-		Data:    lastEntry.GetData(),
+		Data:    newData,
 	}
 
-	s.data[id] = append(s.data[id], newRecord)
-	return newRecord.Copy(), nil
+	s.data[id][lenSoFar-1] = *copyOfLastVersion
+	s.data[id] = append(s.data[id], newVersion)
+
+	return newVersion.Copy(), nil
 }
