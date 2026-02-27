@@ -9,6 +9,8 @@ import (
 	"github.com/regr76/timetravel/entity"
 )
 
+const PersistentTimeFormat = "20060102150405" // use a consistent time format for start and end times of records
+
 // PersistentRecordService is an in-memory implementation of RecordService.
 type PersistentRecordService struct {
 	data map[int][]entity.PersistentRecord
@@ -86,7 +88,7 @@ func (s *PersistentRecordService) CreateRecord(ctx context.Context, record entit
 	newRecord := entity.PersistentRecord{
 		ID:      record.GetID(),
 		Version: 1,
-		Start:   time.Now().UTC().Format("20060102150405"),
+		Start:   time.Now().UTC().Format(PersistentTimeFormat),
 		End:     "",
 		Data:    record.GetData(),
 	}
@@ -102,7 +104,7 @@ func (s *PersistentRecordService) UpdateRecord(ctx context.Context, id int, upda
 		return nil, ErrRecordDoesNotExist
 	}
 
-	existingRecord[len(existingRecord)-1].End = time.Now().UTC().Format("20060102150405") // set end time for last version
+	existingRecord[len(existingRecord)-1].End = time.Now().UTC().Format(PersistentTimeFormat) // set end time for last version
 
 	lastEntry := existingRecord[len(existingRecord)-1] // get the latest version of the record
 

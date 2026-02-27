@@ -22,7 +22,7 @@ func Test_GET_Routes_V1(t *testing.T) {
 	}{
 		{
 			description: "Health check",
-			path:        "/api/v1/health",
+			path:        "/health",
 			wantStatus:  http.StatusOK,
 			wantBody:    "{\"ok\":true}\n",
 		},
@@ -245,7 +245,7 @@ func Test_GET_Routes_V2(t *testing.T) {
 	}{
 		{
 			description: "Health check",
-			path:        "/api/v2/health",
+			path:        "/health",
 			wantStatus:  http.StatusOK,
 			wantBody:    "{\"ok\":true}\n",
 		},

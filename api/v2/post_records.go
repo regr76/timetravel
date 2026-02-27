@@ -68,7 +68,7 @@ func PostRecords(a service.Storage, w http.ResponseWriter, r *http.Request) {
 		record = &entity.PersistentRecord{
 			ID:      int(idNumber),
 			Version: 1, // start version at 1 since the record is being created
-			Start:   time.Now().UTC().Format("20060102150405"),
+			Start:   time.Now().UTC().Format(service.PersistentTimeFormat),
 			End:     "",
 			Data:    recordMap,
 		}
