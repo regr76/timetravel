@@ -1,6 +1,7 @@
 package api
 
 import (
+	"database/sql"
 	"encoding/json"
 	"net/http"
 
@@ -15,18 +16,24 @@ import (
 type API struct {
 	router         *mux.Router
 	inMemRecords   service.RecordService
-	persistRecords service.RecordService
+	persistRecords service.VersionedRecordService
+	db             *sql.DB
 }
 
-func NewAPI(inMemRecords, persistRecords service.RecordService) *API {
-	return &API{inMemRecords: inMemRecords, persistRecords: persistRecords, router: mux.NewRouter()}
+func NewAPI(inMemRecords service.RecordService, persistRecords service.VersionedRecordService, db *sql.DB) *API {
+	return &API{
+		inMemRecords:   inMemRecords,
+		persistRecords: persistRecords,
+		router:         mux.NewRouter(),
+		db:             db,
+	}
 }
 
 func (a *API) InMemRecords() service.RecordService {
 	return a.inMemRecords
 }
 
-func (a *API) PersistentRecords() service.RecordService {
+func (a *API) PersistentRecords() service.VersionedRecordService {
 	return a.persistRecords
 }
 
@@ -43,28 +50,35 @@ func (a *API) CreateRoutesV1(routes *mux.Router) {
 
 // generates all api routes for V2 and adds them to the router
 func (a *API) CreateRoutesV2(routes *mux.Router) {
+	routes.Path("/records/{id}/list").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		v2.ListRecords(a, w, r)
+	}).Methods("GET")
+
+	routes.Path("/records/{id}/versions/{version}").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		v2.GetVersion(a, w, r)
+	}).Methods("GET")
+
 	routes.Path("/records/{id}").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		v2.GetRecords(a, w, r)
 	}).Methods("GET")
 
 	routes.Path("/records/{id}").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		v2.PostRecords(a, w, r)
+		v2.UpdateRecords(a, w, r)
 	}).Methods("POST")
 }
 
-func (a *API) SetupRouter() *mux.Router {
+func (a *API) SetupRouter(db *sql.DB) *mux.Router {
 	inMemService := service.NewInMemoryRecordService()
-	persistService := service.NewPersistentRecordService()
-	api := NewAPI(&inMemService, &persistService)
+	persistService := service.NewPersistentRecordService(db)
+	api := NewAPI(&inMemService, &persistService, db)
 
 	apiRoute1 := a.router.PathPrefix("/api/v1").Subrouter()
-	apiRoute1.Path("/health").HandlerFunc(HealthCheckHandler)
-
 	apiRoute2 := a.router.PathPrefix("/api/v2").Subrouter()
-	apiRoute2.Path("/health").HandlerFunc(HealthCheckHandler)
 
 	api.CreateRoutesV1(apiRoute1)
 	api.CreateRoutesV2(apiRoute2)
+
+	a.router.Path("/health").HandlerFunc(HealthCheckHandler)
 
 	return a.router
 }

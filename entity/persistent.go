@@ -5,9 +5,23 @@ import "maps"
 type PersistentRecord struct {
 	ID      int               `json:"id"`
 	Version int               `json:"version"`
-	Start   string            `json:"start_dt"`
-	End     string            `json:"end_dt,omitempty"`
+	Start   string            `json:"start"`
+	End     string            `json:"end,omitempty"`
 	Data    map[string]string `json:"data"`
+}
+
+type PersistentRecords struct {
+	Records []PersistentRecord `json:"records"`
+}
+
+func (d *PersistentRecords) Copy() VersionedRecords {
+	output := PersistentRecords{
+		Records: make([]PersistentRecord, len(d.Records)),
+	}
+	for i, record := range d.Records {
+		output.Records[i] = *record.Copy().(*PersistentRecord)
+	}
+	return &output
 }
 
 func (d *PersistentRecord) Copy() Record {

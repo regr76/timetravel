@@ -113,11 +113,13 @@ The current API consists of just two endpoints:
 All ids must be **positive integers**.
 
 ## Reference -- V2 API
+- `GET /health`
 - `GET /api/v1/records/{id}`
 - `POST /api/v1/records/{id}`
-- `GET /api/v1/records/{id}/version/{ver}`
-- `GET /api/v1/records/{id}/list`
-- `GET /api/v1/records/{id}/datetime`,
+- `GET /api/v1/records/{id}/versions/{version}`
+- `GET /api/v1/records/{id}/list`,
+
+All ids and versions must be **positive integers**.
 
 ### `GET /api/v1/records/{id}`
 

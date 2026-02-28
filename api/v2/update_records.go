@@ -2,7 +2,6 @@ package v2
 
 import (
 	"encoding/json"
-	"errors"
 	"net/http"
 	"strconv"
 
@@ -14,9 +13,9 @@ import (
 )
 
 // POST /records/{id}
-// if the record exists, the record is updated.
+// if the record exists, the record is updated with a new version.
 // if the record doesn't exist, the record is created.
-func PostRecords(a service.Storage, w http.ResponseWriter, r *http.Request) {
+func UpdateRecords(a service.Storage, w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	id := mux.Vars(r)["id"]
 	idNumber, err := strconv.ParseInt(id, 10, 32)
@@ -36,47 +35,15 @@ func PostRecords(a service.Storage, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// first retrieve the record
-	var record *entity.InMemoryRecord
-	_, err = a.PersistentRecords().GetRecord(
-		ctx,
-		int(idNumber),
-	)
-
-	if !errors.Is(err, service.ErrRecordDoesNotExist) { // record exists
-		temp, err := a.PersistentRecords().UpdateRecord(ctx, int(idNumber), body)
-		record = temp.(*entity.InMemoryRecord)
-
-		if err != nil {
-			errInWriting := helpers.WriteError(w, helpers.ErrInternal.Error(), http.StatusInternalServerError)
-			helpers.LogError(err)
-			helpers.LogError(errInWriting)
-			return
-		}
-
-	} else { // record does not exist
-
-		// exclude the delete updates
-		recordMap := map[string]string{}
-		for key, value := range body {
-			if value != nil {
-				recordMap[key] = *value
-			}
-		}
-
-		record = &entity.InMemoryRecord{
-			ID:   int(idNumber),
-			Data: recordMap,
-		}
-		err = a.PersistentRecords().CreateRecord(ctx, record)
-	}
-
+	temp, err := a.PersistentRecords().UpdateRecord(ctx, int(idNumber), body)
 	if err != nil {
 		errInWriting := helpers.WriteError(w, helpers.ErrInternal.Error(), http.StatusInternalServerError)
 		helpers.LogError(err)
 		helpers.LogError(errInWriting)
 		return
 	}
+
+	record := temp.(*entity.PersistentRecord)
 
 	err = helpers.WriteJSON(w, record, http.StatusOK)
 	helpers.LogError(err)

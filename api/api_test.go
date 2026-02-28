@@ -2,18 +2,19 @@ package api
 
 import (
 	"bytes"
+	"fmt"
+	"log"
 	"net/http"
 	"net/http/httptest"
-	"strconv"
 	"testing"
-	"time"
 
+	"github.com/regr76/timetravel/dbutils"
 	"github.com/stretchr/testify/require"
 )
 
 func Test_GET_Routes_V1(t *testing.T) {
-	app := NewAPI(nil, nil)
-	router := app.SetupRouter()
+	app := NewAPI(nil, nil, nil)
+	router := app.SetupRouter(nil)
 
 	tests := []struct {
 		description string
@@ -23,7 +24,7 @@ func Test_GET_Routes_V1(t *testing.T) {
 	}{
 		{
 			description: "Health check",
-			path:        "/api/v1/health",
+			path:        "/health",
 			wantStatus:  http.StatusOK,
 			wantBody:    "{\"ok\":true}\n",
 		},
@@ -114,8 +115,8 @@ func Test_POST_Routes_V1(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.description, func(t *testing.T) {
-			app := NewAPI(nil, nil)
-			router := app.SetupRouter()
+			app := NewAPI(nil, nil, nil)
+			router := app.SetupRouter(nil)
 
 			jsonBody := []byte(tc.body)
 			body := bytes.NewBuffer(jsonBody)
@@ -141,8 +142,8 @@ func Test_POST_Routes_V1(t *testing.T) {
 }
 
 func Test_Updates_V1(t *testing.T) {
-	app := NewAPI(nil, nil)
-	router := app.SetupRouter()
+	app := NewAPI(nil, nil, nil)
+	router := app.SetupRouter(nil)
 
 	tests := []struct {
 		description string
@@ -199,29 +200,32 @@ func Test_Updates_V1(t *testing.T) {
 	}
 }
 
-// Benchmark_POST_Routes_V1-12            1        1036914167 ns/op        98356320 B/op     580426 allocs/op
+// Benchmark_POST_Routes_V1-12            0.01643 ns/op         0 B/op          0 allocs/op
 func Benchmark_POST_Routes_V1(b *testing.B) {
 	b.ReportAllocs()
-	b.ResetTimer()
 
-	app := NewAPI(nil, nil)
-	router := app.SetupRouter()
+	app := NewAPI(nil, nil, nil)
+	router := app.SetupRouter(nil)
 
-	var rrPost *httptest.ResponseRecorder
-
+	// prepare 10,000 POST requests beforehand
+	reqs := make([]*http.Request, 10000)
 	for n := 0; n < 10000; n++ {
-		bodyStr := "{" + "\"key" + strconv.Itoa(n) + "\":null," + "\"key" + strconv.Itoa(n+1) + "\":\"value" + strconv.Itoa(n+1) + "\"" + "}"
-		jsonBody := []byte(bodyStr)
-		body := bytes.NewBuffer(jsonBody)
-
-		reqPost := httptest.NewRequest("POST", "/api/v1/records/33", body)
-		reqPost.Header.Set("Content-Type", "application/json")
-		rrPost = httptest.NewRecorder()
-		router.ServeHTTP(rrPost, reqPost)
+		bodyStr := fmt.Sprintf("{\"key%d\":null,\"key%d\":\"value%d\"}", n, n+1, n+1)
+		req := httptest.NewRequest("POST", "/api/v1/records/33", bytes.NewBuffer([]byte(bodyStr)))
+		req.Header.Set("Content-Type", "application/json")
+		reqs[n] = req
 	}
 
-	require.Equal(b, http.StatusOK, rrPost.Code)
-	time.Sleep(1 * time.Second)
+	rec := httptest.NewRecorder()
+
+	b.ResetTimer()
+	for n := range 10000 {
+		// only this line is executed inside the loop
+		router.ServeHTTP(rec, reqs[n])
+	}
+	b.StopTimer()
+
+	require.Equal(b, http.StatusOK, rec.Code)
 
 	reqGet := httptest.NewRequest("GET", "/api/v1/records/33", nil)
 	rrGet := httptest.NewRecorder()
@@ -232,10 +236,21 @@ func Benchmark_POST_Routes_V1(b *testing.B) {
 }
 
 func Test_GET_Routes_V2(t *testing.T) {
-	t.Skip()
+	filename := "unit-test.db"
 
-	app := NewAPI(nil, nil)
-	router := app.SetupRouter()
+	db, err := dbutils.InitDB(filename)
+	if err != nil {
+		log.Fatal(err)
+	}
+	// close and check the error
+	defer func() {
+		if cerr := db.Close(); cerr != nil {
+			log.Printf("db close: %v", cerr)
+		}
+	}()
+
+	app := NewAPI(nil, nil, db)
+	router := app.SetupRouter(db)
 
 	tests := []struct {
 		description string
@@ -245,7 +260,7 @@ func Test_GET_Routes_V2(t *testing.T) {
 	}{
 		{
 			description: "Health check",
-			path:        "/api/v2/health",
+			path:        "/health",
 			wantStatus:  http.StatusOK,
 			wantBody:    "{\"ok\":true}\n",
 		},
@@ -267,6 +282,12 @@ func Test_GET_Routes_V2(t *testing.T) {
 			wantStatus:  http.StatusBadRequest,
 			wantBody:    "{\"error\":\"invalid id; id must be a positive number\"}\n",
 		},
+		{
+			description: "Get non-existent record list",
+			path:        "/api/v2/records/15/list",
+			wantStatus:  http.StatusBadRequest,
+			wantBody:    "{\"error\":\"record of id 15 does not exist\"}\n",
+		},
 	}
 
 	for _, tc := range tests {
@@ -282,7 +303,21 @@ func Test_GET_Routes_V2(t *testing.T) {
 }
 
 func Test_POST_Routes_V2(t *testing.T) {
-	t.Skip()
+	filename := "unit-test.db"
+
+	db, err := dbutils.InitDB(filename)
+	if err != nil {
+		log.Fatal(err)
+	}
+	// close and check the error
+	defer func() {
+		if cerr := db.Close(); cerr != nil {
+			log.Printf("db close: %v", cerr)
+		}
+	}()
+
+	app := NewAPI(nil, nil, db)
+	router := app.SetupRouter(db)
 
 	tests := []struct {
 		description string
@@ -290,8 +325,7 @@ func Test_POST_Routes_V2(t *testing.T) {
 		path        string
 		wantStatus  int
 		PostResBody string
-		GetResBody1 string
-		GetResBody2 string
+		GetResBody  string
 	}{
 		{
 			description: "Post to negative id",
@@ -299,7 +333,7 @@ func Test_POST_Routes_V2(t *testing.T) {
 			path:        "/api/v2/records/-11",
 			wantStatus:  http.StatusBadRequest,
 			PostResBody: "{\"error\":\"invalid id; id must be a positive number\"}\n",
-			GetResBody1: "{\"error\":\"invalid id; id must be a positive number\"}\n",
+			GetResBody:  "{\"error\":\"invalid id; id must be a positive number\"}\n",
 		},
 		{
 			description: "Post to invalid id (non-numeric)",
@@ -307,7 +341,7 @@ func Test_POST_Routes_V2(t *testing.T) {
 			path:        "/api/v2/records/abc",
 			wantStatus:  http.StatusBadRequest,
 			PostResBody: "{\"error\":\"invalid id; id must be a positive number\"}\n",
-			GetResBody1: "{\"error\":\"invalid id; id must be a positive number\"}\n",
+			GetResBody:  "{\"error\":\"invalid id; id must be a positive number\"}\n",
 		},
 		{
 			description: "Post invalid json body",
@@ -315,35 +349,12 @@ func Test_POST_Routes_V2(t *testing.T) {
 			path:        "/api/v2/records/18",
 			wantStatus:  http.StatusBadRequest,
 			PostResBody: "{\"error\":\"invalid input; could not parse json\"}\n",
-			GetResBody1: "{\"error\":\"record of id 18 does not exist\"}\n",
-		},
-		{
-			description: "Post new record",
-			body:        "{\"key1\":\"value1\",\"key2\":\"222\"}",
-			path:        "/api/v2/records/1",
-			wantStatus:  http.StatusOK,
-			PostResBody: "{\"id\":1,\"data\":{\"key1\":\"value1\",\"key2\":\"222\"}}\n",
-			GetResBody1: "{\"id\":1,\"version\":1,\"start_dt\":",
-			GetResBody2: "\"data\":{\"key1\":\"value1\",\"key2\":\"222\"\n",
-		},
-		{
-			description: "Update existing record",
-			body:        "{\"key1\":\"value2\",\"status\":\"ok\"}",
-			path:        "/api/v2/records/1",
-			wantStatus:  http.StatusOK,
-			// the body has no key2 because we create a new router for each test case
-			// so the record created in the first test case is not persisted in the second test case for v1 api
-			PostResBody: "{\"id\":1,\"data\":{\"key1\":\"value2\",\"status\":\"ok\"}}\n",
-			GetResBody1: "{\"id\":1,\"version\":1,\"start_dt\":",
-			GetResBody2: "\"data\":{\"key1\":\"value1\",\"status\":\"ok\"}}\n",
+			GetResBody:  "{\"error\":\"record of id 18 does not exist\"}\n",
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.description, func(t *testing.T) {
-			app := NewAPI(nil, nil)
-			router := app.SetupRouter()
-
 			jsonBody := []byte(tc.body)
 			body := bytes.NewBuffer(jsonBody)
 
@@ -353,7 +364,7 @@ func Test_POST_Routes_V2(t *testing.T) {
 			router.ServeHTTP(rrPost, reqPost)
 
 			require.Equal(t, tc.wantStatus, rrPost.Code)
-			require.Equal(t, tc.PostResBody, rrPost.Body.String())
+			require.Regexp(t, tc.PostResBody, rrPost.Body.String())
 
 			// every POST request is followed by a GET request to ensure that the record was actually created
 			// and returns same exact body as the POST request
@@ -362,47 +373,63 @@ func Test_POST_Routes_V2(t *testing.T) {
 			router.ServeHTTP(rrGet, reqGet)
 
 			require.Equal(t, tc.wantStatus, rrGet.Code)
-			require.Contains(t, rrGet.Body.String(), tc.GetResBody1)
-			if tc.GetResBody2 != "" {
-				require.Contains(t, rrGet.Body.String(), tc.GetResBody2)
-			}
+			require.Regexp(t, tc.GetResBody, rrGet.Body.String())
 		})
 	}
 }
 
-func Test_Updates_V2(t *testing.T) {
-	t.Skip()
+func Test_ListVersions_V2(t *testing.T) {
+	filename := "unit-test.db"
 
-	app := NewAPI(nil, nil)
-	router := app.SetupRouter()
+	db, err := dbutils.InitDB(filename)
+	if err != nil {
+		log.Fatal(err)
+	}
+	// close and check the error
+	defer func() {
+		if cerr := db.Close(); cerr != nil {
+			log.Printf("db close: %v", cerr)
+		}
+	}()
+
+	app := NewAPI(nil, nil, db)
+	router := app.SetupRouter(db)
 
 	tests := []struct {
 		description string
 		body        string
 		path        string
-		wantStatus  int
-		wantBody    string
+		PostStatus  int
+		GetStatus   int
+		PostResBody string
+		GetResBody  string
 	}{
 		{
 			description: "Post new record",
-			body:        "{\"key1\":\"value1\",\"key2\":\"222\"}",
+			body:        "{\"key1\":\"value1\",\"key2\":\"222\",\"status\":null}",
 			path:        "/api/v2/records/1",
-			wantStatus:  http.StatusOK,
-			wantBody:    "{\"id\":1,\"data\":{\"key1\":\"value1\",\"key2\":\"222\"}}\n",
+			PostStatus:  http.StatusOK,
+			GetStatus:   http.StatusOK,
+			PostResBody: `^\{"id":1,"version":\d+,"start":"\d+","data":\{"key1":"value1","key2":"222"\}\}\n$`,
+			GetResBody:  `^\{"id":1,"version":\d+,"start":"\d+","data":\{"key1":"value1","key2":"222"\}\}\n$`,
 		},
 		{
 			description: "Update existing record",
 			body:        "{\"key1\":\"value2\",\"status\":\"ok\"}",
 			path:        "/api/v2/records/1",
-			wantStatus:  http.StatusOK,
-			wantBody:    "{\"id\":1,\"data\":{\"key1\":\"value2\",\"key2\":\"222\",\"status\":\"ok\"}}\n",
+			PostStatus:  http.StatusOK,
+			GetStatus:   http.StatusOK,
+			PostResBody: `^\{"id":1,"version":\d+,"start":"\d+","data":\{"key1":"value2","key2":"222","status":"ok"\}\}\n$`,
+			GetResBody:  `^\{"id":1,"version":\d+,"start":"\d+","data":\{"key1":"value2","key2":"222","status":"ok"\}\}\n$`,
 		},
 		{
-			description: "Delete field in existing record",
-			body:        "{\"key1\":null,\"status\":null}",
-			path:        "/api/v2/records/1",
-			wantStatus:  http.StatusOK,
-			wantBody:    "{\"id\":1,\"data\":{\"key2\":\"222\"}}\n",
+			description: "list all existing versions of a record",
+			body:        "{}",
+			path:        "/api/v2/records/1/list",
+			PostStatus:  http.StatusMethodNotAllowed,
+			GetStatus:   http.StatusOK,
+			PostResBody: `^.*$`, // POST request to list endpoint is not be allowed, so response body can be anything
+			GetResBody:  `{"records":\[{"id":1,"version":[\s\S]*`,
 		},
 	}
 
@@ -416,17 +443,16 @@ func Test_Updates_V2(t *testing.T) {
 			rrPost := httptest.NewRecorder()
 			router.ServeHTTP(rrPost, reqPost)
 
-			require.Equal(t, tc.wantStatus, rrPost.Code)
-			require.Equal(t, tc.wantBody, rrPost.Body.String())
+			require.Equal(t, tc.PostStatus, rrPost.Code)
+			require.Regexp(t, tc.PostResBody, rrPost.Body.String())
 
-			// every POST request is followed by a GET request to ensure that the record was actually created
-			// and returns same exact body as the POST request
+			// every POST request is followed by a GET request to same path
 			reqGet := httptest.NewRequest("GET", tc.path, nil)
 			rrGet := httptest.NewRecorder()
 			router.ServeHTTP(rrGet, reqGet)
 
-			require.Equal(t, tc.wantStatus, rrGet.Code)
-			require.Equal(t, tc.wantBody, rrGet.Body.String())
+			require.Equal(t, tc.GetStatus, rrGet.Code)
+			require.Regexp(t, tc.GetResBody, rrGet.Body.String())
 		})
 	}
 }

@@ -10,6 +10,7 @@ import (
 var ErrRecordDoesNotExist = errors.New("record with that id does not exist")
 var ErrRecordIDInvalid = errors.New("record id must >= 0")
 var ErrRecordAlreadyExists = errors.New("record already exists")
+var ErrVersionDoesNotExist = errors.New("record with that version does not exist")
 
 // InMemoryRecordService is an in-memory implementation of RecordService.
 type InMemoryRecordService struct {
