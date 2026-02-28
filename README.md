@@ -10,7 +10,7 @@ make clean
 
 2. Test the server using the healthcheck endpoint:
 ```bash
-curl -X POST http://localhost:8000/api/v1/health
+curl http://localhost:8000/health
 ```
 
 You should see the following response:
@@ -32,23 +32,6 @@ The current codebase represents a very simplified version of this system, with:
 - `GET /api/v1/record/{id}` – retrieves a record (a simple JSON mapping of
 strings to strings)
 - `POST /api/v1/record/{id}` – creates or updates a record
-
-### The Problem
-
-Maintaining only the *current* state of each record is not enough. For
-compliance and proper risk assessment, we must also understand how that state
-*evolved*.
-
-Consider the following example. A business buys a policy in January. In March,
-they change their business hours, but they don't notify us until July. During
-that four-month gap, we are unknowingly covering a risk that has changed.
-Depending on the nature of the change, we may need to:
-- **Retroactively adjust the premium**
-- Or even **void the policy** if the change introduces unacceptable risk
-
-To resolve this, we need a versioned, historical view of the data:
-- What did we know and when?
-- When did the change actually occur?
 
 ### Objective 1: Persist Data with SQLite
 
@@ -73,37 +56,6 @@ functionality:
 - Ensure full backward compatibility: `/api/v1` endpoints should continue to
 work as-is, with no changes in behavior
 
-
-## Notes on the Assignment
-
-You are free to use any tools, libraries, or frameworks you prefer — even building
-the solution in a different programming language if desired.
-
-We expect you to work on this task as if it was a normal project at work. So please write
-your code in a way that fits your intuitive notion of operating within best practices.
-
-We recommend making separate commits for each objective to help illustrate how you approached
-and broke down the assignment.  Don't hesitate to commit work that you later revise or remove
-— it's valuable to see your process evolve over time.
-
-Parts of this assignment are left intentionally ambiguous. How you resolve these
-ambiguities will help us understand your decision-making process.
-
-However, if you do have questions, don't hesitate to reach out!
-
-### FAQ
-
-#### Can I use a different language?
-Yes! We've had successful submissions in Python, Java, and others. Just make sure the
-functionality replicates what's provided in the Go starter code.
-
-#### Did you really end up implementing something like this at Rainbow?
-Yes, but unfortunately it wasn't as simple as this in practice. For insurance a
-number of requirements force us to maintain historic records across many
-different object types. So in fact we implemented this across multiple different
-tables in our database. 
-
-
 ## Reference -- V1 API
 
 The current API consists of just two endpoints:
@@ -117,7 +69,9 @@ All ids must be **positive integers**.
 - `GET /api/v1/records/{id}`
 - `POST /api/v1/records/{id}`
 - `GET /api/v1/records/{id}/versions/{version}`
-- `GET /api/v1/records/{id}/list`,
+- `GET /api/v1/records/{id}/list`
+- TODO: `GET /api/v1/records/{id}/datetime`
+,
 
 All ids and versions must be **positive integers**.
 
