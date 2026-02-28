@@ -15,14 +15,12 @@ const PersistentTimeFormat = "20060102150405" // use a consistent time format fo
 
 // PersistentRecordService is an in-memory implementation of RecordService.
 type PersistentRecordService struct {
-	data map[int][]entity.PersistentRecord
-	db   *sql.DB
+	db *sql.DB
 }
 
 func NewPersistentRecordService(db *sql.DB) PersistentRecordService {
 	return PersistentRecordService{
-		data: map[int][]entity.PersistentRecord{},
-		db:   db,
+		db: db,
 	}
 }
 

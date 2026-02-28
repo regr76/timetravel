@@ -1,5 +1,4 @@
-tt
-tt.exe
+*tt*
 .idea
 .DS_Store
 *.coverprofile
@@ -7,5 +6,5 @@ tt.exe
 vendor/
 
 
-timetravel.db
-unit_test.db
+*timetravel*
+unit-test.db

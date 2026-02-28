@@ -27,14 +27,14 @@ const (
 )
 
 func InitDB(filename string) (*sql.DB, error) {
-	db, err := sql.Open("sqlite3", "file:"+filename+"?cache=shared&mode=rwc")
+	db, err := sql.Open("sqlite3", "file:"+filename+"?_journal_mode=WAL&_busy_timeout=1000")
 	if err != nil {
 		return nil, err
 	}
 
-	db.SetMaxIdleConns(5)
-	db.SetMaxOpenConns(15)
-	db.SetConnMaxLifetime(5 * time.Minute)
+	db.SetMaxIdleConns(1)
+	db.SetMaxOpenConns(1)
+	db.SetConnMaxLifetime(1 * time.Second)
 
 	// Verify the connection
 	if err := db.Ping(); err != nil {

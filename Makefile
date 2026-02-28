@@ -28,6 +28,8 @@ build-race:
 
 clean:
 	rm -f $(TARGET)
+	rm -f unit-test.db
+	rm -f timetravel.db
 	find . -type f -name "*.coverprofile" -delete
 	find . -type f -name "*.out" -delete
 	rm -rf vendor

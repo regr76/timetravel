@@ -3,10 +3,12 @@ package api
 import (
 	"bytes"
 	"fmt"
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
+	"github.com/regr76/timetravel/dbutils"
 	"github.com/stretchr/testify/require"
 )
 
@@ -234,8 +236,21 @@ func Benchmark_POST_Routes_V1(b *testing.B) {
 }
 
 func Test_GET_Routes_V2(t *testing.T) {
-	app := NewAPI(nil, nil, nil)
-	router := app.SetupRouter(nil)
+	filename := "unit-test.db"
+
+	db, err := dbutils.InitDB(filename)
+	if err != nil {
+		log.Fatal(err)
+	}
+	// close and check the error
+	defer func() {
+		if cerr := db.Close(); cerr != nil {
+			log.Printf("db close: %v", cerr)
+		}
+	}()
+
+	app := NewAPI(nil, nil, db)
+	router := app.SetupRouter(db)
 
 	tests := []struct {
 		description string
@@ -288,7 +303,21 @@ func Test_GET_Routes_V2(t *testing.T) {
 }
 
 func Test_POST_Routes_V2(t *testing.T) {
-	t.Skip()
+	filename := "unit-test.db"
+
+	db, err := dbutils.InitDB(filename)
+	if err != nil {
+		log.Fatal(err)
+	}
+	// close and check the error
+	defer func() {
+		if cerr := db.Close(); cerr != nil {
+			log.Printf("db close: %v", cerr)
+		}
+	}()
+
+	app := NewAPI(nil, nil, db)
+	router := app.SetupRouter(db)
 
 	tests := []struct {
 		description string
@@ -322,31 +351,10 @@ func Test_POST_Routes_V2(t *testing.T) {
 			PostResBody: "{\"error\":\"invalid input; could not parse json\"}\n",
 			GetResBody:  "{\"error\":\"record of id 18 does not exist\"}\n",
 		},
-		{
-			description: "Post new record",
-			body:        "{\"key1\":\"value1\",\"key2\":\"222\"}",
-			path:        "/api/v2/records/1",
-			wantStatus:  http.StatusOK,
-			PostResBody: "{\"id\":1,\"data\":{\"key1\":\"value1\",\"key2\":\"222\"}}\n",
-			GetResBody:  `^\{"id":1,"version":1,"start":"\d+","data":\{"key1":"value1","key2":"222"\}\}\n$`,
-		},
-		{
-			description: "Update existing record",
-			body:        "{\"key1\":\"value2\",\"status\":\"ok\"}",
-			path:        "/api/v2/records/1",
-			wantStatus:  http.StatusOK,
-			// the body has no key2 because we create a new router for each test case
-			// so the record created in the first test case is not persisted in the second test case for v1 api
-			PostResBody: "{\"id\":1,\"data\":{\"key1\":\"value2\",\"status\":\"ok\"}}\n",
-			GetResBody:  `^\{"id":1,"version":1,"start":"\d+","data":\{"key1":"value2","key2":"222","status":"ok"\}\}\n$`,
-		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.description, func(t *testing.T) {
-			app := NewAPI(nil, nil, nil)
-			router := app.SetupRouter(nil)
-
 			jsonBody := []byte(tc.body)
 			body := bytes.NewBuffer(jsonBody)
 
@@ -356,7 +364,7 @@ func Test_POST_Routes_V2(t *testing.T) {
 			router.ServeHTTP(rrPost, reqPost)
 
 			require.Equal(t, tc.wantStatus, rrPost.Code)
-			require.Equal(t, tc.PostResBody, rrPost.Body.String())
+			require.Regexp(t, tc.PostResBody, rrPost.Body.String())
 
 			// every POST request is followed by a GET request to ensure that the record was actually created
 			// and returns same exact body as the POST request
@@ -370,39 +378,58 @@ func Test_POST_Routes_V2(t *testing.T) {
 	}
 }
 
-func Test_Updates_V2(t *testing.T) {
-	t.Skip()
+func Test_ListVersions_V2(t *testing.T) {
+	filename := "unit-test.db"
 
-	app := NewAPI(nil, nil, nil)
-	router := app.SetupRouter(nil)
+	db, err := dbutils.InitDB(filename)
+	if err != nil {
+		log.Fatal(err)
+	}
+	// close and check the error
+	defer func() {
+		if cerr := db.Close(); cerr != nil {
+			log.Printf("db close: %v", cerr)
+		}
+	}()
+
+	app := NewAPI(nil, nil, db)
+	router := app.SetupRouter(db)
 
 	tests := []struct {
 		description string
 		body        string
 		path        string
-		wantStatus  int
-		wantBody    string
+		PostStatus  int
+		GetStatus   int
+		PostResBody string
+		GetResBody  string
 	}{
 		{
 			description: "Post new record",
-			body:        "{\"key1\":\"value1\",\"key2\":\"222\"}",
+			body:        "{\"key1\":\"value1\",\"key2\":\"222\",\"status\":null}",
 			path:        "/api/v2/records/1",
-			wantStatus:  http.StatusOK,
-			wantBody:    "{\"id\":1,\"data\":{\"key1\":\"value1\",\"key2\":\"222\"}}\n",
+			PostStatus:  http.StatusOK,
+			GetStatus:   http.StatusOK,
+			PostResBody: `^\{"id":1,"version":\d+,"start":"\d+","data":\{"key1":"value1","key2":"222"\}\}\n$`,
+			GetResBody:  `^\{"id":1,"version":\d+,"start":"\d+","data":\{"key1":"value1","key2":"222"\}\}\n$`,
 		},
 		{
 			description: "Update existing record",
 			body:        "{\"key1\":\"value2\",\"status\":\"ok\"}",
 			path:        "/api/v2/records/1",
-			wantStatus:  http.StatusOK,
-			wantBody:    "{\"id\":1,\"data\":{\"key1\":\"value2\",\"key2\":\"222\",\"status\":\"ok\"}}\n",
+			PostStatus:  http.StatusOK,
+			GetStatus:   http.StatusOK,
+			PostResBody: `^\{"id":1,"version":\d+,"start":"\d+","data":\{"key1":"value2","key2":"222","status":"ok"\}\}\n$`,
+			GetResBody:  `^\{"id":1,"version":\d+,"start":"\d+","data":\{"key1":"value2","key2":"222","status":"ok"\}\}\n$`,
 		},
 		{
-			description: "Delete field in existing record",
-			body:        "{\"key1\":null,\"status\":null}",
-			path:        "/api/v2/records/1",
-			wantStatus:  http.StatusOK,
-			wantBody:    "{\"id\":1,\"data\":{\"key2\":\"222\"}}\n",
+			description: "list all existing versions of a record",
+			body:        "{}",
+			path:        "/api/v2/records/1/list",
+			PostStatus:  http.StatusMethodNotAllowed,
+			GetStatus:   http.StatusOK,
+			PostResBody: `^.*$`, // POST request to list endpoint is not be allowed, so response body can be anything
+			GetResBody:  `{"records":\[{"id":1,"version":[\s\S]*`,
 		},
 	}
 
@@ -416,17 +443,16 @@ func Test_Updates_V2(t *testing.T) {
 			rrPost := httptest.NewRecorder()
 			router.ServeHTTP(rrPost, reqPost)
 
-			require.Equal(t, tc.wantStatus, rrPost.Code)
-			require.Equal(t, tc.wantBody, rrPost.Body.String())
+			require.Equal(t, tc.PostStatus, rrPost.Code)
+			require.Regexp(t, tc.PostResBody, rrPost.Body.String())
 
-			// every POST request is followed by a GET request to ensure that the record was actually created
-			// and returns same exact body as the POST request
+			// every POST request is followed by a GET request to same path
 			reqGet := httptest.NewRequest("GET", tc.path, nil)
 			rrGet := httptest.NewRecorder()
 			router.ServeHTTP(rrGet, reqGet)
 
-			require.Equal(t, tc.wantStatus, rrGet.Code)
-			require.Equal(t, tc.wantBody, rrGet.Body.String())
+			require.Equal(t, tc.GetStatus, rrGet.Code)
+			require.Regexp(t, tc.GetResBody, rrGet.Body.String())
 		})
 	}
 }
