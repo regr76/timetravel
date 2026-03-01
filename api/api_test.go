@@ -200,7 +200,7 @@ func Test_Updates_V1(t *testing.T) {
 	}
 }
 
-// Benchmark_POST_Routes_V1-12            0.01643 ns/op         0 B/op          0 allocs/op
+// Benchmark_POST_Routes_V1           0.01643 ns/op         0 B/op          0 allocs/op
 func Benchmark_POST_Routes_V1(b *testing.B) {
 	b.ReportAllocs()
 
@@ -455,4 +455,52 @@ func Test_ListVersions_V2(t *testing.T) {
 			require.Regexp(t, tc.GetResBody, rrGet.Body.String())
 		})
 	}
+}
+
+// Benchmark_POST_Routes_V2       0.2991 ns/op          0 B/op          0 allocs/op
+func Benchmark_POST_Routes_V2(b *testing.B) {
+	filename := "unit-test.db"
+
+	db, err := dbutils.InitDB(filename)
+	if err != nil {
+		log.Fatal(err)
+	}
+	// close and check the error
+	defer func() {
+		if cerr := db.Close(); cerr != nil {
+			log.Printf("db close: %v", cerr)
+		}
+	}()
+
+	app := NewAPI(nil, nil, db)
+	router := app.SetupRouter(db)
+
+	b.ReportAllocs()
+
+	// prepare 10,000 POST requests beforehand
+	reqs := make([]*http.Request, 10000)
+	for n := 0; n < 10000; n++ {
+		bodyStr := fmt.Sprintf("{\"key%d\":null,\"key%d\":\"value%d\"}", n, n+1, n+1)
+		req := httptest.NewRequest("POST", "/api/v2/records/99", bytes.NewBuffer([]byte(bodyStr)))
+		req.Header.Set("Content-Type", "application/json")
+		reqs[n] = req
+	}
+
+	rec := httptest.NewRecorder()
+
+	b.ResetTimer()
+	for n := range 10000 {
+		// only this line is executed inside the loop
+		router.ServeHTTP(rec, reqs[n])
+	}
+	b.StopTimer()
+
+	require.Equal(b, http.StatusOK, rec.Code)
+
+	reqGet := httptest.NewRequest("GET", "/api/v2/records/99", nil)
+	rrGet := httptest.NewRecorder()
+	router.ServeHTTP(rrGet, reqGet)
+
+	require.Equal(b, http.StatusOK, rrGet.Code)
+	require.Regexp(b, `^\{"id":99,"version":\d+,"start":"\d+","data":\{"key10000":"value10000"\}\}\n$`, rrGet.Body.String())
 }
