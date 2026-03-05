@@ -14,7 +14,7 @@ type PersistentRecords struct {
 	Records []PersistentRecord `json:"records"`
 }
 
-func (d *PersistentRecords) Copy() VersionedRecords {
+func (d *PersistentRecords) Copy() VersionedRecord {
 	output := PersistentRecords{
 		Records: make([]PersistentRecord, len(d.Records)),
 	}

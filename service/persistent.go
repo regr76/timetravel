@@ -64,7 +64,7 @@ func (s *PersistentRecordService) GetVersion(ctx context.Context, id int, versio
 }
 
 // ListRecords will retrieve record containing all versions.
-func (s *PersistentRecordService) ListRecords(ctx context.Context, id int) (entity.VersionedRecords, error) {
+func (s *PersistentRecordService) ListRecords(ctx context.Context, id int) (entity.VersionedRecord, error) {
 	recordsStr, err := dbutils.ReadAllVersions(s.db, id)
 
 	if err != nil {

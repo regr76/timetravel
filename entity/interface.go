@@ -9,6 +9,6 @@ type Record interface {
 	SetData(map[string]string)
 }
 
-type VersionedRecords interface {
-	Copy() VersionedRecords
+type VersionedRecord interface {
+	Copy() VersionedRecord
 }
