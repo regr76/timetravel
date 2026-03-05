@@ -6,24 +6,26 @@ import (
 	"strconv"
 
 	"github.com/gorilla/mux"
+
 	"github.com/regr76/timetravel/api/helpers"
 	"github.com/regr76/timetravel/service"
 )
 
-// GET /records/{id}/version/{version}
-// ListRecords retrieves the record including all versions
-func ListRecords(a service.Storage, w http.ResponseWriter, r *http.Request) {
+// GET /records/{id}
+// GetRecord retrieves the record.
+func GetRecord(a service.Storage, w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	id := mux.Vars(r)["id"]
 
 	idNumber, err := strconv.ParseInt(id, 10, 32)
+
 	if err != nil || idNumber <= 0 {
 		err := helpers.WriteError(w, "invalid id; id must be a positive number", http.StatusBadRequest)
 		helpers.LogError(err)
 		return
 	}
 
-	records, err := a.PersistentRecords().ListRecords(
+	record, err := a.PersistentRecords().GetRecord(
 		ctx,
 		int(idNumber),
 	)
@@ -33,6 +35,6 @@ func ListRecords(a service.Storage, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = helpers.WriteJSON(w, records, http.StatusOK)
+	err = helpers.WriteJSON(w, record, http.StatusOK)
 	helpers.LogError(err)
 }

@@ -15,7 +15,7 @@ import (
 // POST /records/{id}
 // if the record exists, the record is updated with a new version.
 // if the record doesn't exist, the record is created.
-func UpdateRecords(a service.Storage, w http.ResponseWriter, r *http.Request) {
+func UpdateRecord(a service.Storage, w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	id := mux.Vars(r)["id"]
 	idNumber, err := strconv.ParseInt(id, 10, 32)
